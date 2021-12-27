@@ -20,21 +20,18 @@ package org.apache.shenyu.client.springcloud.init;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
 import org.apache.shenyu.client.core.exception.ShenyuClientIllegalArgumentException;
-import org.apache.shenyu.client.core.disruptor.ShenyuClientRegisterEventPublisher;
-//import org.apache.shenyu.client.springcloud.annotation.ShenyuSpringCloudClient;
+import org.apache.shenyu.client.core.register.BeanPostShenyuClientRegister;
 import org.apache.shenyu.client.springcloud.ShenyuClientUtils;
 import org.apache.shenyu.client.springcloud.annotation.ShenyuSpringCloudClient;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
+import org.apache.shenyu.register.common.dto.URIRegisterDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.core.env.Environment;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,30 +39,31 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Properties;
 
 /**
- * The type Shenyu client bean post processor.
+ * SpringCloudClientBeanPostProcessorEx .
  */
-public class SpringCloudClientBeanPostProcessor implements BeanPostProcessor {
+public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegister {
     
     private static final Logger LOG = LoggerFactory.getLogger(SpringCloudClientBeanPostProcessor.class);
     
-    private final ShenyuClientRegisterEventPublisher publisher = ShenyuClientRegisterEventPublisher.getInstance();
-    
-    private final String contextPath;
+    private final String servletContextPath;
     
     private final Boolean isFull;
     
     private final Environment env;
     
-    private final String servletContextPath;
+    private boolean isFullTrue = false;
+    
     
     /**
-     * Instantiates a new Spring cloud client bean post processor.
+     * Instantiates a new Abstract shenyu client register.
      *
      * @param clientConfig                   the client config
      * @param shenyuClientRegisterRepository the shenyu client register repository
@@ -74,25 +72,35 @@ public class SpringCloudClientBeanPostProcessor implements BeanPostProcessor {
     public SpringCloudClientBeanPostProcessor(final PropertiesConfig clientConfig,
                                               final ShenyuClientRegisterRepository shenyuClientRegisterRepository,
                                               final Environment env) {
-        String appName = env.getProperty("spring.application.name");
-        Properties props = clientConfig.getProps();
-        this.contextPath = props.getProperty(ShenyuClientConstants.CONTEXT_PATH);
-        if (StringUtils.isBlank(appName)) {
+        super(clientConfig, shenyuClientRegisterRepository);
+        this.env = env;
+        this.isFull = Boolean.parseBoolean(clientConfig.getProps().getProperty(ShenyuClientConstants.IS_FULL, Boolean.FALSE.toString()));
+        this.servletContextPath = env.getProperty("server.servlet.context-path", "");
+    }
+    
+    /**
+     * Check param.
+     */
+    @Override
+    public void checkParam() {
+        if (StringUtils.isBlank(getAppName())) {
             String errorMsg = "spring cloud param must config the appName";
             LOG.error(errorMsg);
             throw new ShenyuClientIllegalArgumentException(errorMsg);
         }
-        this.env = env;
-        this.isFull = Boolean.parseBoolean(props.getProperty(ShenyuClientConstants.IS_FULL, Boolean.FALSE.toString()));
-        this.servletContextPath = env.getProperty("server.servlet.context-path", "");
-        publisher.start(shenyuClientRegisterRepository);
     }
     
+    /**
+     * Gets meta data dto.
+     *
+     * @return the meta data dto
+     */
     @Override
-    public Object postProcessAfterInitialization(@NonNull final Object bean, @NonNull final String beanName) throws BeansException {
+    public List<MetaDataRegisterDTO> getMetaDataDto() {
         if (Boolean.TRUE.equals(isFull)) {
-            return bean;
+            return buildMetaDataDTO();
         }
+        Object bean = this.getBean();
         Controller controller = AnnotationUtils.findAnnotation(bean.getClass(), Controller.class);
         RestController restController = AnnotationUtils.findAnnotation(bean.getClass(), RestController.class);
         RequestMapping requestMapping = AnnotationUtils.findAnnotation(bean.getClass(), RequestMapping.class);
@@ -101,27 +109,25 @@ public class SpringCloudClientBeanPostProcessor implements BeanPostProcessor {
             String prePath = "";
             ShenyuSpringCloudClient clazzAnnotation = ShenyuClientUtils.getShenyuClient(bean.getClass());
             if (Objects.isNull(clazzAnnotation)) {
-                return bean;
+                return Collections.emptyList();
             }
             if (clazzAnnotation.path().indexOf("*") > 1) {
-                publisher.publishEvent(buildMetaDataDTO(clazzAnnotation, prePath));
-                return bean;
+                return Collections.singletonList(buildMetaDataDTO(clazzAnnotation, prePath));
             }
             prePath = StringUtils.isBlank(clazzAnnotation.path()) ? getPrePath(requestMapping) : clazzAnnotation.path();
             final Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(bean.getClass());
+            List<MetaDataRegisterDTO> metaDataRegisters = new ArrayList<>();
             for (Method method : methods) {
                 ShenyuSpringCloudClient shenyuSpringCloudClient = ShenyuClientUtils.getShenyuClient(method);
                 if (Objects.nonNull(shenyuSpringCloudClient)) {
-                    publisher.publishEvent(buildMetaDataDTO(shenyuSpringCloudClient, prePath));
+                    metaDataRegisters.add(buildMetaDataDTO(shenyuSpringCloudClient, prePath));
                 }
             }
+            return metaDataRegisters;
         }
-        return bean;
+        return Collections.emptyList();
     }
     
-    private boolean isNext(Annotation[] annotations) {
-        return Arrays.stream(annotations).anyMatch(Objects::nonNull);
-    }
     private String getPrePath(Annotation annotation) {
         if (annotation == null) {
             return null;
@@ -137,14 +143,19 @@ public class SpringCloudClientBeanPostProcessor implements BeanPostProcessor {
         return null;
     }
     
+    private boolean isNext(Annotation[] annotations) {
+        return Arrays.stream(annotations).anyMatch(Objects::nonNull);
+    }
+    
+    
     private MetaDataRegisterDTO buildMetaDataDTO(final ShenyuSpringCloudClient shenyuSpringCloudClient, final String prePath) {
         String appName = env.getProperty("spring.application.name");
-        String path = contextPath + prePath + shenyuSpringCloudClient.path();
+        String path = this.getContextPath() + Optional.ofNullable(prePath).orElse("") + shenyuSpringCloudClient.path();
         String desc = shenyuSpringCloudClient.desc();
         String configRuleName = shenyuSpringCloudClient.ruleName();
         String ruleName = ("".equals(configRuleName)) ? path : configRuleName;
         return MetaDataRegisterDTO.builder()
-                .contextPath(StringUtils.defaultIfBlank(this.contextPath, this.servletContextPath))
+                .contextPath(StringUtils.defaultIfBlank(this.getContextPath(), this.servletContextPath))
                 .appName(appName)
                 .path(path)
                 .pathDesc(desc)
@@ -153,6 +164,42 @@ public class SpringCloudClientBeanPostProcessor implements BeanPostProcessor {
                 .ruleName(ruleName)
                 .build();
     }
+    
+    /**
+     * Gets register dto.
+     *
+     * @return the register dto
+     */
+    @Override
+    public URIRegisterDTO getRegisterDto() {
+        return buildURIRegisterDTO();
+    }
+    
+    private URIRegisterDTO buildURIRegisterDTO() {
+        String host = this.getHost();
+        return URIRegisterDTO.builder()
+                .contextPath(this.getContextPath())
+                .appName(this.getAppName())
+                .host(host)
+                .port(this.getPort())
+                .rpcType(RpcTypeEnum.SPRING_CLOUD.getName())
+                .build();
+    }
+    
+    private List<MetaDataRegisterDTO> buildMetaDataDTO() {
+        if (isFullTrue) {
+            return Collections.emptyList();
+        }
+        isFullTrue = true;
+        String contextPath = this.getContextPath();
+        MetaDataRegisterDTO build = MetaDataRegisterDTO.builder()
+                .contextPath(contextPath)
+                .appName(this.getAppName())
+                .path(contextPath)
+                .rpcType(RpcTypeEnum.SPRING_CLOUD.getName())
+                .enabled(true)
+                .ruleName(contextPath)
+                .build();
+        return Collections.singletonList(build);
+    }
 }
-
-
