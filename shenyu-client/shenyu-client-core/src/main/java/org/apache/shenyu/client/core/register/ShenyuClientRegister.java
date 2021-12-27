@@ -15,55 +15,40 @@
  * limitations under the License.
  */
 
-package org.apache.shenyu.client.grpc.common.annotation;
+package org.apache.shenyu.client.core.register;
 
-import org.apache.shenyu.client.core.annotaion.ShenyuClient;
+import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
+import org.apache.shenyu.register.common.dto.URIRegisterDTO;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.util.List;
 
 /**
- * The interface shenyu client.
+ * ShenyuClientRegister .
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE, ElementType.METHOD})
-@ShenyuClient
-public @interface ShenyuGrpcClient {
+public interface ShenyuClientRegister{
+    
     
     /**
-     * Path string.
-     *
-     * @return the string
+     * Send registration meta data.
      */
-    String path();
-
+    void registerMetaData();
+    
     /**
-     * Rule name string.
-     *
-     * @return the string
+     * Register.
      */
-    String ruleName() default "";
-
+    void registerService();
+    
     /**
-     * Desc string.
+     * Gets meta data dto.
      *
-     * @return String string
+     * @return the meta data dto
      */
-    String desc() default "";
-
+    List<MetaDataRegisterDTO> getMetaDataDto();
+    
     /**
-     * Enabled boolean.
+     * Gets register dto.
      *
-     * @return the boolean
+     * @return the register dto
      */
-    boolean enabled() default true;
-
-    /**
-     * Timeout long.
-     *
-     * @return the timeout
-     */
-    int timeout() default 5000;
+    URIRegisterDTO getRegisterDto();
 }

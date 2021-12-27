@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
 import org.apache.shenyu.client.core.disruptor.ShenyuClientRegisterEventPublisher;
 import org.apache.shenyu.client.core.exception.ShenyuClientIllegalArgumentException;
+import org.apache.shenyu.client.springmvc.ShenyuClientUtils;
 import org.apache.shenyu.client.springmvc.annotation.ShenyuSpringMvcClient;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
@@ -111,8 +112,9 @@ public class SpringMvcClientBeanPostProcessor implements BeanPostProcessor {
         if (Boolean.TRUE.equals(isFull) || !hasAnnotation(bean.getClass(), Controller.class)) {
             return bean;
         }
-        
-        final ShenyuSpringMvcClient beanShenyuClient = AnnotationUtils.findAnnotation(bean.getClass(), ShenyuSpringMvcClient.class);
+
+//        final ShenyuSpringMvcClient beanShenyuClient = AnnotationUtils.findAnnotation(bean.getClass(), ShenyuSpringMvcClient.class);
+        ShenyuSpringMvcClient beanShenyuClient = ShenyuClientUtils.getShenyuClient(bean.getClass());
         final String superPath = buildApiSuperPath(bean.getClass());
         // Compatible with previous versions
         if (Objects.nonNull(beanShenyuClient) && superPath.contains("*")) {
@@ -121,7 +123,8 @@ public class SpringMvcClientBeanPostProcessor implements BeanPostProcessor {
         }
         final Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(bean.getClass());
         for (Method method : methods) {
-            ShenyuSpringMvcClient methodShenyuClient = AnnotationUtils.findAnnotation(method, ShenyuSpringMvcClient.class);
+//            ShenyuSpringMvcClient methodShenyuClient = AnnotationUtils.findAnnotation(method, ShenyuSpringMvcClient.class);
+            ShenyuSpringMvcClient methodShenyuClient = ShenyuClientUtils.getShenyuClient(method);
             methodShenyuClient = Objects.isNull(methodShenyuClient) ? beanShenyuClient : methodShenyuClient;
             if (Objects.nonNull(methodShenyuClient)) {
                 publisher.publishEvent(buildMetaDataDTO(methodShenyuClient, buildApiPath(method, superPath)));
@@ -136,7 +139,8 @@ public class SpringMvcClientBeanPostProcessor implements BeanPostProcessor {
     }
     
     private String buildApiPath(@NonNull final Method method, @NonNull final String superPath) {
-        ShenyuSpringMvcClient shenyuSpringMvcClient = AnnotationUtils.findAnnotation(method, ShenyuSpringMvcClient.class);
+//        ShenyuSpringMvcClient shenyuSpringMvcClient = AnnotationUtils.findAnnotation(method, ShenyuSpringMvcClient.class);
+        ShenyuSpringMvcClient shenyuSpringMvcClient = ShenyuClientUtils.getShenyuClient(method);
         if (Objects.nonNull(shenyuSpringMvcClient) && StringUtils.isNotBlank(shenyuSpringMvcClient.path())) {
             return pathJoin(contextPath, superPath, shenyuSpringMvcClient.path());
         }
@@ -175,7 +179,8 @@ public class SpringMvcClientBeanPostProcessor implements BeanPostProcessor {
     }
     
     private String buildApiSuperPath(@NonNull final Class<?> method) {
-        ShenyuSpringMvcClient shenyuSpringMvcClient = AnnotationUtils.findAnnotation(method, ShenyuSpringMvcClient.class);
+//        ShenyuSpringMvcClient shenyuSpringMvcClient = AnnotationUtils.findAnnotation(method, ShenyuSpringMvcClient.class);
+        ShenyuSpringMvcClient shenyuSpringMvcClient = ShenyuClientUtils.getShenyuClient(method);
         if (Objects.nonNull(shenyuSpringMvcClient) && StringUtils.isNotBlank(shenyuSpringMvcClient.path())) {
             return shenyuSpringMvcClient.path();
         }

@@ -21,6 +21,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
 import org.apache.shenyu.client.core.exception.ShenyuClientIllegalArgumentException;
 import org.apache.shenyu.client.core.disruptor.ShenyuClientRegisterEventPublisher;
+//import org.apache.shenyu.client.springcloud.annotation.ShenyuSpringCloudClient;
+import org.apache.shenyu.client.springcloud.ShenyuClientUtils;
 import org.apache.shenyu.client.springcloud.annotation.ShenyuSpringCloudClient;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
@@ -38,8 +40,11 @@ import org.springframework.util.ReflectionUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 
 /**
@@ -91,9 +96,10 @@ public class SpringCloudClientBeanPostProcessor implements BeanPostProcessor {
         Controller controller = AnnotationUtils.findAnnotation(bean.getClass(), Controller.class);
         RestController restController = AnnotationUtils.findAnnotation(bean.getClass(), RestController.class);
         RequestMapping requestMapping = AnnotationUtils.findAnnotation(bean.getClass(), RequestMapping.class);
-        if (controller != null || restController != null || requestMapping != null) {
+        Annotation[] array = {controller, restController, requestMapping};
+        if (isNext(array)) {
             String prePath = "";
-            ShenyuSpringCloudClient clazzAnnotation = AnnotationUtils.findAnnotation(bean.getClass(), ShenyuSpringCloudClient.class);
+            ShenyuSpringCloudClient clazzAnnotation = ShenyuClientUtils.getShenyuClient(bean.getClass());
             if (Objects.isNull(clazzAnnotation)) {
                 return bean;
             }
@@ -101,16 +107,34 @@ public class SpringCloudClientBeanPostProcessor implements BeanPostProcessor {
                 publisher.publishEvent(buildMetaDataDTO(clazzAnnotation, prePath));
                 return bean;
             }
-            prePath = clazzAnnotation.path();
+            prePath = StringUtils.isBlank(clazzAnnotation.path()) ? getPrePath(requestMapping) : clazzAnnotation.path();
             final Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(bean.getClass());
             for (Method method : methods) {
-                ShenyuSpringCloudClient shenyuSpringCloudClient = AnnotationUtils.findAnnotation(method, ShenyuSpringCloudClient.class);
+                ShenyuSpringCloudClient shenyuSpringCloudClient = ShenyuClientUtils.getShenyuClient(method);
                 if (Objects.nonNull(shenyuSpringCloudClient)) {
                     publisher.publishEvent(buildMetaDataDTO(shenyuSpringCloudClient, prePath));
                 }
             }
         }
         return bean;
+    }
+    
+    private boolean isNext(Annotation[] annotations) {
+        return Arrays.stream(annotations).anyMatch(Objects::nonNull);
+    }
+    private String getPrePath(Annotation annotation) {
+        if (annotation == null) {
+            return null;
+        }
+        Class<? extends Annotation> aClass = annotation.annotationType();
+        if (aClass.isAssignableFrom(RequestMapping.class)) {
+            String[] path = ((RequestMapping) annotation).path();
+            if (path.length <= 0) {
+                path = ((RequestMapping) annotation).value();
+            }
+            return path.length <= 0 ? null : path[0];
+        }
+        return null;
     }
     
     private MetaDataRegisterDTO buildMetaDataDTO(final ShenyuSpringCloudClient shenyuSpringCloudClient, final String prePath) {

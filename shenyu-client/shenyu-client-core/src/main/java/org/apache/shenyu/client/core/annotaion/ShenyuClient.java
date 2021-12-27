@@ -15,55 +15,51 @@
  * limitations under the License.
  */
 
-package org.apache.shenyu.client.grpc.common.annotation;
-
-import org.apache.shenyu.client.core.annotaion.ShenyuClient;
+package org.apache.shenyu.client.core.annotaion;
 
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * The interface shenyu client.
+ * The interface Shenyu client.
+ * An annotation for customer use, when the user marks this annotation,
+ * Indicates that the user interface needs to be published to shenyu.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD})
-@ShenyuClient
-public @interface ShenyuGrpcClient {
+@Inherited
+public @interface ShenyuClient {
     
     /**
      * Path string.
      *
      * @return the string
      */
-    String path();
-
+    String path() default "";
+    
     /**
      * Rule name string.
      *
      * @return the string
      */
     String ruleName() default "";
-
+    
     /**
      * Desc string.
      *
      * @return String string
      */
     String desc() default "";
-
+    
     /**
      * Enabled boolean.
      *
      * @return the boolean
      */
     boolean enabled() default true;
-
-    /**
-     * Timeout long.
-     *
-     * @return the timeout
-     */
-    int timeout() default 5000;
+    
+    
 }

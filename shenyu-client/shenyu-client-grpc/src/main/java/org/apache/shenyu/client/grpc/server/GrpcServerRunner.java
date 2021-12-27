@@ -21,6 +21,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerServiceDefinition;
 import org.apache.shenyu.client.grpc.GrpcClientBeanPostProcessor;
+import org.apache.shenyu.client.grpc.GrpcClientBeanPostProcessorEx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -38,10 +39,10 @@ public class GrpcServerRunner implements ApplicationRunner {
 
     private final GrpcServerBuilder grpcServerBuilder;
 
-    private final GrpcClientBeanPostProcessor grpcClientBeanPostProcessor;
+    private final GrpcClientBeanPostProcessorEx grpcClientBeanPostProcessor;
 
     public GrpcServerRunner(final GrpcServerBuilder grpcServerBuilder,
-                            final GrpcClientBeanPostProcessor grpcClientBeanPostProcessor) {
+                            final GrpcClientBeanPostProcessorEx grpcClientBeanPostProcessor) {
         this.grpcServerBuilder = grpcServerBuilder;
         this.grpcClientBeanPostProcessor = grpcClientBeanPostProcessor;
     }
