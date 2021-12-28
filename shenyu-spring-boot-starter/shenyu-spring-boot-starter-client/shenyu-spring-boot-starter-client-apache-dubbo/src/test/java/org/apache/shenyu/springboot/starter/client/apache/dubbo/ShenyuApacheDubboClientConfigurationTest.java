@@ -34,18 +34,18 @@ import static org.junit.Assert.assertNotNull;
 @EnableConfigurationProperties
 @PropertySource(value = "classpath:application.properties")
 public class ShenyuApacheDubboClientConfigurationTest {
-
+    
     @Test
     public void testShenyuApacheDubboClientConfiguration() {
         new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(ShenyuApacheDubboClientConfiguration.class))
-            .withBean(ShenyuApacheDubboClientConfigurationTest.class)
-            .withPropertyValues("debug=true")
-            .run(
-                context -> {
-                    ApacheDubboServiceBeanListener listener = context.getBean("apacheDubboServiceBeanListener", ApacheDubboServiceBeanListener.class);
-                    assertNotNull(listener);
-                }
-            );
+                .withConfiguration(AutoConfigurations.of(ShenyuApacheDubboClientConfiguration.class))
+                .withBean(ShenyuApacheDubboClientConfigurationTest.class)
+                .withPropertyValues("debug=true")
+                .run(
+                        context -> {
+                            ApacheDubboServiceBeanListener listener = context.getBean("apacheDubboServiceBeanListener", ApacheDubboServiceBeanListener.class);
+                            assertNotNull(listener);
+                        }
+                );
     }
 }

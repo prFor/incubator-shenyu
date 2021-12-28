@@ -36,7 +36,7 @@ public class ShenyuApacheDubboClientConfiguration {
     /**
      * Apache dubbo service bean listener apache dubbo service bean listener.
      *
-     * @param clientConfig the client config
+     * @param clientConfig                   the client config
      * @param shenyuClientRegisterRepository the shenyu client register repository
      * @return the apache dubbo service bean listener
      */
