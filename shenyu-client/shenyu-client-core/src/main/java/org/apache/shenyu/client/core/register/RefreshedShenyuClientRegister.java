@@ -17,13 +17,19 @@
 
 package org.apache.shenyu.client.core.register;
 
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
+import org.apache.shenyu.client.core.annotaion.ShenyuClientUtils;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
+import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,7 +56,7 @@ public abstract class RefreshedShenyuClientRegister extends AbstractShenyuClient
      * @param clazz the clazz
      * @return the beans of type
      */
-    protected <T> Map<String, T> getBeansOfType(Class<T> clazz) {
+    protected <T> Map<String, T> getBeansOfType(final Class<T> clazz) {
         if (this.applicationContext == null) {
             return Collections.emptyMap();
         }
@@ -62,7 +68,7 @@ public abstract class RefreshedShenyuClientRegister extends AbstractShenyuClient
      *
      * @param applicationContext the application context
      */
-    protected void setApplicationContext(ApplicationContext applicationContext) {
+    protected void setApplicationContext(final ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
     
@@ -84,5 +90,87 @@ public abstract class RefreshedShenyuClientRegister extends AbstractShenyuClient
     public void onApplicationEvent(final ContextRefreshedEvent contextRefreshedEvent) {
         this.setApplicationContext(contextRefreshedEvent.getApplicationContext());
         mergeExecute();
+        
     }
+    
+    /**
+     * Gets annotation.
+     *
+     * @param <T>   the type parameter
+     * @param clazz the clazz
+     * @return the annotation
+     */
+    protected <T extends Annotation> T getAnnotation(final Class<?> clazz) {
+        return ShenyuClientUtils.getShenyuClient(clazz, this.getOwnerClass(), this::delegate);
+    }
+    
+    /**
+     * Gets annotation.
+     *
+     * @param <T>    the type parameter
+     * @param method the method
+     * @return the annotation
+     */
+    protected <T extends Annotation> T getAnnotation(final Method method) {
+        return ShenyuClientUtils.getShenyuClient(method, this.getOwnerClass(), this::delegate);
+    }
+    
+    /**
+     * Is shenyu client or owner boolean.
+     *
+     * @param method the method
+     * @return the boolean
+     */
+    protected boolean isShenyuClientOrOwner(final Method method) {
+        return ShenyuClientUtils.isShenyuClientOrOwner(method, this.getOwnerClass());
+    }
+    
+    /**
+     * Is shenyu client or owner boolean.
+     *
+     * @param clazz the clazz
+     * @return the boolean
+     */
+    protected boolean isShenyuClientOrOwner(final Class<?> clazz) {
+        return ShenyuClientUtils.isShenyuClientOrOwner(clazz, this.getOwnerClass());
+    }
+    
+    /**
+     * Merge execute.
+     */
+    void mergeExecute() {
+        if (!this.isRegistered()) {
+            return;
+        }
+        //Check the parameters
+        checkParam();
+        this.registerMetaData(this.applicationContext);
+        this.registerService();
+    }
+    
+    /**
+     * Gets meta data dto.
+     *
+     * @param applicationContext the object
+     * @return the meta data dto
+     */
+    @Override
+    public abstract List<MetaDataRegisterDTO> getMetaDataDto(Object applicationContext);
+    
+    /**
+     * Delegation t.
+     *
+     * @param <T>    the type parameter
+     * @param client the client
+     * @return the t
+     */
+    protected abstract <T extends Annotation> T delegate(ShenyuClient client);
+    
+    /**
+     * Gets owner class.
+     *
+     * @param <T> the type parameter
+     * @return the owner class
+     */
+    protected abstract <T extends Annotation> Class<T> getOwnerClass();
 }

@@ -22,10 +22,13 @@ import com.weibo.api.motan.config.springsupport.BasicServiceConfigBean;
 import com.weibo.api.motan.config.springsupport.annotation.MotanService;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
 import org.apache.shenyu.client.core.exception.ShenyuClientIllegalArgumentException;
 import org.apache.shenyu.client.core.disruptor.ShenyuClientRegisterEventPublisher;
+import org.apache.shenyu.client.core.register.BeanPostShenyuClientRegister;
 import org.apache.shenyu.client.motan.common.annotation.ShenyuMotanClient;
+import org.apache.shenyu.client.motan.common.annotation.ShenyuMotanClientDelegate;
 import org.apache.shenyu.client.motan.common.dto.MotanRpcExt;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.common.utils.GsonUtils;
@@ -33,6 +36,7 @@ import org.apache.shenyu.common.utils.IpUtils;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
+import org.apache.shenyu.register.common.dto.URIRegisterDTO;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -41,9 +45,11 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
 import org.springframework.util.ReflectionUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
@@ -54,59 +60,25 @@ import java.util.stream.Collectors;
 /**
  * Motan BeanPostProcessor.
  */
-public class MotanServiceBeanPostProcessor implements BeanPostProcessor, ApplicationContextAware {
-
+public class MotanServiceBeanPostProcessor extends BeanPostShenyuClientRegister {
+    
     private static final String BASE_SERVICE_CONFIG = "baseServiceConfig";
-
+    
     private final LocalVariableTableParameterNameDiscoverer localVariableTableParameterNameDiscoverer = new LocalVariableTableParameterNameDiscoverer();
-
-    private ShenyuClientRegisterEventPublisher publisher = ShenyuClientRegisterEventPublisher.getInstance();
-
-    private ApplicationContext applicationContext;
-
+    
     private final ExecutorService executorService;
-
-    private final String contextPath;
-
-    private final String appName;
-
-    private final String host;
-
-    private final String port;
-
+    
     private String group;
-
+    
+    
     public MotanServiceBeanPostProcessor(final PropertiesConfig clientConfig, final ShenyuClientRegisterRepository shenyuClientRegisterRepository) {
-        Properties props = clientConfig.getProps();
-        String contextPath = props.getProperty(ShenyuClientConstants.CONTEXT_PATH);
-        String appName = props.getProperty(ShenyuClientConstants.APP_NAME);
-        if (StringUtils.isEmpty(contextPath)) {
-            throw new ShenyuClientIllegalArgumentException("motan client must config the contextPath");
-        }
-        this.contextPath = contextPath;
-        this.appName = appName;
-        this.host = props.getProperty(ShenyuClientConstants.HOST);
-        this.port = props.getProperty(ShenyuClientConstants.PORT);
+        super(clientConfig, shenyuClientRegisterRepository);
         executorService = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("shenyu-motan-client-thread-pool-%d").build());
-        publisher.start(shenyuClientRegisterRepository);
     }
-
-    @Override
-    public Object postProcessAfterInitialization(final Object bean, final String beanName) throws BeansException {
-        Class<?> clazz = bean.getClass();
-        if (AopUtils.isAopProxy(bean)) {
-            clazz = AopUtils.getTargetClass(bean);
-        }
-        MotanService service = clazz.getAnnotation(MotanService.class);
-        if (service != null) {
-            executorService.execute(() -> handler(bean));
-        }
-        return bean;
-    }
-
+    
     private void handler(final Object bean) {
         if (group == null) {
-            group = ((BasicServiceConfigBean) applicationContext.getBean(BASE_SERVICE_CONFIG)).getGroup();
+            group = ((BasicServiceConfigBean) this.getApplicationContext().getBean(BASE_SERVICE_CONFIG)).getGroup();
         }
         Class<?> clazz = bean.getClass();
         if (AopUtils.isAopProxy(bean)) {
@@ -122,7 +94,7 @@ public class MotanServiceBeanPostProcessor implements BeanPostProcessor, Applica
             }
         }
     }
-
+    
     private MetaDataRegisterDTO buildMetaDataDTO(final Class<?> clazz, final MotanService service,
                                                  final ShenyuMotanClient shenyuMotanClient, final Method method, final String rpcExt) {
         String appName = this.appName;
@@ -163,7 +135,7 @@ public class MotanServiceBeanPostProcessor implements BeanPostProcessor, Applica
                 .enabled(shenyuMotanClient.enabled())
                 .build();
     }
-
+    
     private MotanRpcExt.RpcExt buildRpcExt(final Method method) {
         String[] paramNames = localVariableTableParameterNameDiscoverer.getParameterNames(method);
         List<Pair<String, String>> params = new ArrayList<>();
@@ -175,7 +147,7 @@ public class MotanServiceBeanPostProcessor implements BeanPostProcessor, Applica
         }
         return new MotanRpcExt.RpcExt(method.getName(), params);
     }
-
+    
     private String buildRpcExt(final Method[] methods) {
         List<MotanRpcExt.RpcExt> list = new ArrayList<>();
         for (Method method : methods) {
@@ -187,9 +159,64 @@ public class MotanServiceBeanPostProcessor implements BeanPostProcessor, Applica
         MotanRpcExt buildList = new MotanRpcExt(list, group);
         return GsonUtils.getInstance().toJson(buildList);
     }
-
+    
+    /**
+     * Check param.
+     */
     @Override
-    public void setApplicationContext(final ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
+    public void checkParam() {
+        if (StringUtils.isEmpty(this.getContextPath())) {
+            throw new ShenyuClientIllegalArgumentException("motan client must config the contextPath");
+        }
+    }
+    
+    /**
+     * Gets meta data dto.
+     *
+     * @param bean the object
+     * @return the meta data dto
+     */
+    @Override
+    public List<MetaDataRegisterDTO> getMetaDataDto(final Object bean) {
+        Class<?> clazz = bean.getClass();
+        if (AopUtils.isAopProxy(bean)) {
+            clazz = AopUtils.getTargetClass(bean);
+        }
+        MotanService service = clazz.getAnnotation(MotanService.class);
+        if (service != null) {
+            executorService.execute(() -> handler(bean));
+        }
+        return Collections.emptyList();
+    }
+    
+    /**
+     * Delegation t.
+     *
+     * @param client the client
+     * @return the t
+     */
+    @Override
+    protected ShenyuMotanClient delegate(final ShenyuClient client) {
+        return new ShenyuMotanClientDelegate(client);
+    }
+    
+    /**
+     * Gets owner class.
+     *
+     * @return the owner class
+     */
+    @Override
+    protected Class<ShenyuMotanClient> getOwnerClass() {
+        return ShenyuMotanClient.class;
+    }
+    
+    /**
+     * Gets register dto.
+     *
+     * @return the register dto
+     */
+    @Override
+    public URIRegisterDTO getRegisterDto() {
+        return null;
     }
 }

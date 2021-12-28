@@ -26,8 +26,8 @@ import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
 import org.apache.shenyu.client.core.exception.ShenyuClientIllegalArgumentException;
 import org.apache.shenyu.client.core.register.BeanPostShenyuClientRegister;
-import org.apache.shenyu.client.grpc.common.ShenyuClientUtils;
 import org.apache.shenyu.client.grpc.common.annotation.ShenyuGrpcClient;
+import org.apache.shenyu.client.grpc.common.annotation.ShenyuGrpcClientDelegate;
 import org.apache.shenyu.client.grpc.common.dto.GrpcExt;
 import org.apache.shenyu.client.grpc.json.JsonServerServiceInterceptor;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
@@ -74,15 +74,60 @@ public class GrpcClientBeanPostProcessor extends BeanPostShenyuClientRegister {
     /**
      * Gets meta data dto.
      *
+     * @param bean the object
      * @return the meta data dto
      */
     @Override
-    public List<MetaDataRegisterDTO> getMetaDataDto() {
-        if (getBean() instanceof BindableService) {
-            exportJsonGenericService(getBean());
-            return handler(getBean());
+    public List<MetaDataRegisterDTO> getMetaDataDto(final Object bean) {
+        if (bean instanceof BindableService) {
+            exportJsonGenericService(bean);
+            return handler(bean);
         }
         return Collections.emptyList();
+    }
+    
+    /**
+     * Gets register dto.
+     *
+     * @return the register dto
+     */
+    @Override
+    public URIRegisterDTO getRegisterDto() {
+        return buildURIRegisterDTO();
+    }
+    
+    /**
+     * Check param.
+     */
+    @Override
+    public void checkParam() {
+        if (StringUtils.isAnyBlank(this.getContextPath(), ipAndPort)) {
+            throw new ShenyuClientIllegalArgumentException("grpc client must config the contextPath, ipAndPort");
+        }
+        
+        if (this.getPort() == null) {
+            throw new ShenyuClientIllegalArgumentException("grpc client must config the contextPath, ipAndPort");
+        }
+    }
+    
+    /**
+     * Gets service definitions.
+     *
+     * @return the service definitions
+     */
+    public List<ServerServiceDefinition> getServiceDefinitions() {
+        return this.serviceDefinitions;
+    }
+    
+    private URIRegisterDTO buildURIRegisterDTO() {
+        String host = this.getHost();
+        return URIRegisterDTO.builder()
+                .contextPath(this.getContextPath())
+                .appName(this.ipAndPort)
+                .rpcType(RpcTypeEnum.GRPC.getName())
+                .host(host)
+                .port(this.getPort())
+                .build();
     }
     
     private List<MetaDataRegisterDTO> handler(final Object serviceBean) {
@@ -110,9 +155,10 @@ public class GrpcClientBeanPostProcessor extends BeanPostShenyuClientRegister {
             return Collections.emptyList();
         }
         final Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(clazz);
-        return Arrays.stream(methods).filter(m -> m.isAnnotationPresent(ShenyuGrpcClient.class) || m.isAnnotationPresent(ShenyuClient.class))
+        return Arrays.stream(methods)
+                .filter(this::isShenyuClientOrOwner)
                 .map(method -> {
-                    ShenyuGrpcClient shenyuGrpcClient = ShenyuClientUtils.getShenyuClient(method);
+                    ShenyuGrpcClient shenyuGrpcClient = this.getAnnotation(method);
                     return this.buildMetaDataDTO(packageName, shenyuGrpcClient, method);
                 }).collect(Collectors.toList());
     }
@@ -167,47 +213,18 @@ public class GrpcClientBeanPostProcessor extends BeanPostShenyuClientRegister {
         }
     }
     
+    @Override
+    protected ShenyuGrpcClient delegate(final ShenyuClient shenyuClient) {
+        return new ShenyuGrpcClientDelegate(shenyuClient);
+    }
+    
     /**
-     * Gets register dto.
+     * Gets owner class.
      *
-     * @return the register dto
+     * @return the owner class
      */
     @Override
-    public URIRegisterDTO getRegisterDto() {
-        return buildURIRegisterDTO();
-    }
-    
-    private URIRegisterDTO buildURIRegisterDTO() {
-        String host = this.getHost();
-        return URIRegisterDTO.builder()
-                .contextPath(this.getContextPath())
-                .appName(this.ipAndPort)
-                .rpcType(RpcTypeEnum.GRPC.getName())
-                .host(host)
-                .port(this.getPort())
-                .build();
-    }
-    
-    /**
-     * Check param.
-     */
-    @Override
-    public void checkParam() {
-        if (StringUtils.isAnyBlank(this.getContextPath(), ipAndPort)) {
-            throw new ShenyuClientIllegalArgumentException("grpc client must config the contextPath, ipAndPort");
-        }
-        
-        if (this.getPort() == null) {
-            throw new ShenyuClientIllegalArgumentException("grpc client must config the contextPath, ipAndPort");
-        }
-    }
-    
-    /**
-     * Gets service definitions.
-     *
-     * @return the service definitions
-     */
-    public List<ServerServiceDefinition> getServiceDefinitions() {
-        return this.serviceDefinitions;
+    protected Class<ShenyuGrpcClient> getOwnerClass() {
+        return ShenyuGrpcClient.class;
     }
 }

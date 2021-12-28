@@ -19,7 +19,6 @@
 package org.apache.dromara.springboot.starter.client.grpc;
 
 import org.apache.shenyu.client.grpc.GrpcClientBeanPostProcessor;
-import org.apache.shenyu.client.grpc.GrpcContextRefreshedEventListener;
 import org.apache.shenyu.client.grpc.server.GrpcServerRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,25 +37,25 @@ import static org.junit.Assert.assertNotNull;
 @EnableConfigurationProperties
 @ComponentScan(value = "org.apache.dromara.springboot.starter.client.grpc.server")
 public class ShenyuGrpcClientConfigurationTest {
-
+    
     private ApplicationContextRunner applicationContextRunner;
-
+    
     @Before
     public void before() {
         applicationContextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(ShenyuGrpcClientConfiguration.class))
-            .withBean(ShenyuGrpcClientConfigurationTest.class)
-            .withPropertyValues(
-                "debug=true",
-                "shenyu.register.registerType=http",
-                "shenyu.register.serverLists=http://localhost:9095",
-                "shenyu.client.grpc.props[contextPath]=/grpc",
-                "shenyu.client.grpc.props[appName]=grpc",
-                "shenyu.client.grpc.props[ipAndPort]=127.0.0.1:8080",
-                "shenyu.client.grpc.props[port]=8080"
-            );
+                .withConfiguration(AutoConfigurations.of(ShenyuGrpcClientConfiguration.class))
+                .withBean(ShenyuGrpcClientConfigurationTest.class)
+                .withPropertyValues(
+                        "debug=true",
+                        "shenyu.register.registerType=http",
+                        "shenyu.register.serverLists=http://localhost:9095",
+                        "shenyu.client.grpc.props[contextPath]=/grpc",
+                        "shenyu.client.grpc.props[appName]=grpc",
+                        "shenyu.client.grpc.props[ipAndPort]=127.0.0.1:8080",
+                        "shenyu.client.grpc.props[port]=8080"
+                );
     }
-
+    
     @Test
     public void testGrpcClientBeanPostProcessor() {
         applicationContextRunner.run(context -> {
@@ -64,15 +63,7 @@ public class ShenyuGrpcClientConfigurationTest {
             assertNotNull(processor);
         });
     }
-
-    @Test
-    public void testGrpcContextRefreshedEventListener() {
-        applicationContextRunner.run(context -> {
-            GrpcContextRefreshedEventListener listener = context.getBean("grpcContextRefreshedEventListener", GrpcContextRefreshedEventListener.class);
-            assertNotNull(listener);
-        });
-    }
-
+    
     @Test
     public void testGrpcServerRunner() {
         applicationContextRunner.run(context -> {

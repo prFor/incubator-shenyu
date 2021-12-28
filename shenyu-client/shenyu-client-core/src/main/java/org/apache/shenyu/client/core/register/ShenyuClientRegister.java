@@ -25,13 +25,15 @@ import java.util.List;
 /**
  * ShenyuClientRegister .
  */
-public interface ShenyuClientRegister{
+public interface ShenyuClientRegister {
     
     
     /**
      * Send registration meta data.
+     *
+     * @param object the object
      */
-    void registerMetaData();
+    void registerMetaData(Object object);
     
     /**
      * Register.
@@ -41,9 +43,10 @@ public interface ShenyuClientRegister{
     /**
      * Gets meta data dto.
      *
+     * @param object the object
      * @return the meta data dto
      */
-    List<MetaDataRegisterDTO> getMetaDataDto();
+    List<MetaDataRegisterDTO> getMetaDataDto(Object object);
     
     /**
      * Gets register dto.

@@ -18,11 +18,12 @@
 package org.apache.shenyu.client.springcloud.init;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
 import org.apache.shenyu.client.core.exception.ShenyuClientIllegalArgumentException;
 import org.apache.shenyu.client.core.register.BeanPostShenyuClientRegister;
-import org.apache.shenyu.client.springcloud.ShenyuClientUtils;
 import org.apache.shenyu.client.springcloud.annotation.ShenyuSpringCloudClient;
+import org.apache.shenyu.client.springcloud.annotation.ShenyuSpringCloudClientDelegate;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
@@ -59,8 +60,7 @@ public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegi
     
     private final Environment env;
     
-    private boolean isFullTrue = false;
-    
+    private boolean isFullTrue;
     
     /**
      * Instantiates a new Abstract shenyu client register.
@@ -93,21 +93,21 @@ public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegi
     /**
      * Gets meta data dto.
      *
+     * @param bean the object
      * @return the meta data dto
      */
     @Override
-    public List<MetaDataRegisterDTO> getMetaDataDto() {
+    public List<MetaDataRegisterDTO> getMetaDataDto(final Object bean) {
         if (Boolean.TRUE.equals(isFull)) {
             return buildMetaDataDTO();
         }
-        Object bean = this.getBean();
         Controller controller = AnnotationUtils.findAnnotation(bean.getClass(), Controller.class);
         RestController restController = AnnotationUtils.findAnnotation(bean.getClass(), RestController.class);
         RequestMapping requestMapping = AnnotationUtils.findAnnotation(bean.getClass(), RequestMapping.class);
         Annotation[] array = {controller, restController, requestMapping};
         if (isNext(array)) {
             String prePath = "";
-            ShenyuSpringCloudClient clazzAnnotation = ShenyuClientUtils.getShenyuClient(bean.getClass());
+            ShenyuSpringCloudClient clazzAnnotation = this.getAnnotation(bean.getClass());
             if (Objects.isNull(clazzAnnotation)) {
                 return Collections.emptyList();
             }
@@ -118,7 +118,7 @@ public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegi
             final Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(bean.getClass());
             List<MetaDataRegisterDTO> metaDataRegisters = new ArrayList<>();
             for (Method method : methods) {
-                ShenyuSpringCloudClient shenyuSpringCloudClient = ShenyuClientUtils.getShenyuClient(method);
+                ShenyuSpringCloudClient shenyuSpringCloudClient = this.getAnnotation(method);
                 if (Objects.nonNull(shenyuSpringCloudClient)) {
                     metaDataRegisters.add(buildMetaDataDTO(shenyuSpringCloudClient, prePath));
                 }
@@ -128,7 +128,7 @@ public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegi
         return Collections.emptyList();
     }
     
-    private String getPrePath(Annotation annotation) {
+    private String getPrePath(final Annotation annotation) {
         if (annotation == null) {
             return null;
         }
@@ -143,10 +143,9 @@ public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegi
         return null;
     }
     
-    private boolean isNext(Annotation[] annotations) {
+    private boolean isNext(final Annotation[] annotations) {
         return Arrays.stream(annotations).anyMatch(Objects::nonNull);
     }
-    
     
     private MetaDataRegisterDTO buildMetaDataDTO(final ShenyuSpringCloudClient shenyuSpringCloudClient, final String prePath) {
         String appName = env.getProperty("spring.application.name");
@@ -163,6 +162,23 @@ public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegi
                 .enabled(shenyuSpringCloudClient.enabled())
                 .ruleName(ruleName)
                 .build();
+    }
+    
+    private List<MetaDataRegisterDTO> buildMetaDataDTO() {
+        if (isFullTrue) {
+            return Collections.emptyList();
+        }
+        isFullTrue = true;
+        String contextPath = this.getContextPath();
+        MetaDataRegisterDTO build = MetaDataRegisterDTO.builder()
+                .contextPath(contextPath)
+                .appName(this.getAppName())
+                .path(contextPath)
+                .rpcType(RpcTypeEnum.SPRING_CLOUD.getName())
+                .enabled(true)
+                .ruleName(contextPath)
+                .build();
+        return Collections.singletonList(build);
     }
     
     /**
@@ -186,20 +202,18 @@ public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegi
                 .build();
     }
     
-    private List<MetaDataRegisterDTO> buildMetaDataDTO() {
-        if (isFullTrue) {
-            return Collections.emptyList();
-        }
-        isFullTrue = true;
-        String contextPath = this.getContextPath();
-        MetaDataRegisterDTO build = MetaDataRegisterDTO.builder()
-                .contextPath(contextPath)
-                .appName(this.getAppName())
-                .path(contextPath)
-                .rpcType(RpcTypeEnum.SPRING_CLOUD.getName())
-                .enabled(true)
-                .ruleName(contextPath)
-                .build();
-        return Collections.singletonList(build);
+    @Override
+    protected ShenyuSpringCloudClient delegate(final ShenyuClient shenyuClient) {
+        return new ShenyuSpringCloudClientDelegate(shenyuClient);
+    }
+    
+    /**
+     * Gets owner class.
+     *
+     * @return the owner class
+     */
+    @Override
+    protected Class<ShenyuSpringCloudClient> getOwnerClass() {
+        return ShenyuSpringCloudClient.class;
     }
 }

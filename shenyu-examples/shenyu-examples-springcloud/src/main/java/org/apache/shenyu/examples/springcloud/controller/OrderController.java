@@ -17,6 +17,7 @@
 
 package org.apache.shenyu.examples.springcloud.controller;
 
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.springcloud.annotation.ShenyuSpringCloudClient;
 import org.apache.shenyu.examples.springcloud.dto.OrderDTO;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/order")
-@ShenyuSpringCloudClient(path = "/order")
+@ShenyuClient()
 public class OrderController {
 
     /**
@@ -42,7 +43,7 @@ public class OrderController {
      * @return the order dto
      */
     @PostMapping("/save")
-    @ShenyuSpringCloudClient(path = "/save")
+    @ShenyuClient(path = "/save")
     public OrderDTO save(@RequestBody final OrderDTO orderDTO) {
         orderDTO.setName("hello world spring cloud save order");
         return orderDTO;

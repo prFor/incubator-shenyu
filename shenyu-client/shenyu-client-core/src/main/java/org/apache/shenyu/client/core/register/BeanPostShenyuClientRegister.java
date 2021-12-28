@@ -19,16 +19,17 @@ package org.apache.shenyu.client.core.register;
 
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
+import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.event.ContextRefreshedEvent;
+
+import java.util.List;
 
 /**
  * BeanPostShenyuClientRegister .
  */
 public abstract class BeanPostShenyuClientRegister extends RefreshedShenyuClientRegister implements BeanPostProcessor {
-    
-    private Object bean;
     
     /**
      * Instantiates a new Abstract shenyu client register.
@@ -40,11 +41,9 @@ public abstract class BeanPostShenyuClientRegister extends RefreshedShenyuClient
         super(clientConfig, shenyuClientRegisterRepository);
     }
     
-    
     @Override
     public Object postProcessAfterInitialization(final Object bean, final String beanName) throws BeansException {
-        this.registerMetaData();
-        this.bean = bean;
+        this.registerMetaData(bean);
         return bean;
     }
     
@@ -63,11 +62,11 @@ public abstract class BeanPostShenyuClientRegister extends RefreshedShenyuClient
     }
     
     /**
-     * Gets bean.
+     * Gets meta data dto.
      *
-     * @return the bean
+     * @param bean the object
+     * @return the meta data dto
      */
-    public Object getBean() {
-        return this.bean;
-    }
+    @Override
+    public abstract List<MetaDataRegisterDTO> getMetaDataDto(Object bean);
 }

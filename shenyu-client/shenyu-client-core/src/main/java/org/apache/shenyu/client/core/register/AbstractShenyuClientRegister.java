@@ -124,7 +124,7 @@ public abstract class AbstractShenyuClientRegister implements ShenyuClientRegist
      * @param defaultValue the default value
      * @return the app name
      */
-    public String getAppName(String defaultValue) {
+    public String getAppName(final String defaultValue) {
         return StringUtils.isBlank(this.appName) ? defaultValue : this.appName;
     }
     
@@ -152,18 +152,14 @@ public abstract class AbstractShenyuClientRegister implements ShenyuClientRegist
      * @param defaultValue the default value
      * @return the port
      */
-    public Integer getPort(int defaultValue) {
+    public Integer getPort(final int defaultValue) {
         return StringUtils.isBlank(this.port) ? defaultValue : Integer.parseInt(this.port);
     }
     
-    /**
-     * Send registration meta data.
-     */
     @Override
-    @SuppressWarnings("all")
-    public void registerMetaData() {
-        List<MetaDataRegisterDTO> metas = this.getMetaDataDto();
-        metas.forEach(metaDataRegisterDTO -> publisher.publishEvent(metaDataRegisterDTO));
+    public void registerMetaData(final Object object) {
+        List<MetaDataRegisterDTO> metas = this.getMetaDataDto(object);
+        metas.forEach(this::publishEvent);
     }
     
     /**
@@ -173,8 +169,12 @@ public abstract class AbstractShenyuClientRegister implements ShenyuClientRegist
     public void registerService() {
         URIRegisterDTO registerDto = this.getRegisterDto();
         if (registerDto != null) {
-            publisher.publishEvent(registerDto);
+            this.publishEvent(registerDto);
         }
+    }
+    
+    <T> void publishEvent(final T dto) {
+        this.publisher.publishEvent(dto);
     }
     
     /**
@@ -186,18 +186,6 @@ public abstract class AbstractShenyuClientRegister implements ShenyuClientRegist
         return registered.compareAndSet(false, true);
     }
     
-    /**
-     * Merge execute.
-     */
-    void mergeExecute() {
-        if (!this.isRegistered()) {
-            return;
-        }
-        //Check the parameters
-        checkParam();
-        this.registerMetaData();
-        this.registerService();
-    }
     
     /**
      * Check param.

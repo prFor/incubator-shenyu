@@ -17,7 +17,6 @@
 
 package org.apache.shenyu.springboot.starter.client.springmvc;
 
-import org.apache.shenyu.client.springmvc.init.ContextRegisterListener;
 import org.apache.shenyu.client.springmvc.init.SpringMvcClientBeanPostProcessor;
 import org.junit.Before;
 import org.junit.Test;

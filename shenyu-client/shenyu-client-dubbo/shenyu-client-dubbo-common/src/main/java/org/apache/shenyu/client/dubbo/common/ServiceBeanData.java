@@ -19,17 +19,13 @@ package org.apache.shenyu.client.dubbo.common;
 
 import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.List;
 import java.util.Optional;
 
 /**
- * ServiceData .
+ * ServiceBeanData .
  */
-public class ServiceData {
-    
+public class ServiceBeanData {
     
     private final Object serverConfig;
     
@@ -38,7 +34,7 @@ public class ServiceData {
      *
      * @param serverConfig the server config
      */
-    public ServiceData(final Object serverConfig) {
+    public ServiceBeanData(final Object serverConfig) {
         this.serverConfig = serverConfig;
     }
     
@@ -160,9 +156,8 @@ public class ServiceData {
         return Optional.ofNullable(cluster).orElse("failover");
     }
     
-    
     @SuppressWarnings("all")
-    private <T> T getProperty(Object obj, String property) {
+    private <T> T getProperty(final Object obj, final String property) {
         Method method = ReflectionUtils.findMethod(obj.getClass(), property);
         try {
             return (T) method.invoke(obj);
@@ -171,7 +166,7 @@ public class ServiceData {
         }
     }
     
-    private <T> T getProperty(String property) {
+    private <T> T getProperty(final String property) {
         return this.getProperty(this.serverConfig, property);
     }
 }

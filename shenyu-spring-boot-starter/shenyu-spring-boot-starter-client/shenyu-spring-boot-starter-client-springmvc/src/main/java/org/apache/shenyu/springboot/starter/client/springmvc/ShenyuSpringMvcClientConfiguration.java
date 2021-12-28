@@ -17,7 +17,6 @@
 
 package org.apache.shenyu.springboot.starter.client.springmvc;
 
-import org.apache.shenyu.client.springmvc.init.ContextRegisterListener;
 import org.apache.shenyu.client.springmvc.init.SpringMvcClientBeanPostProcessor;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;

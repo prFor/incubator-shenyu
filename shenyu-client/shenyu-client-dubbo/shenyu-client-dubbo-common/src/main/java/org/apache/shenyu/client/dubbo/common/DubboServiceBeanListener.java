@@ -21,6 +21,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.core.exception.ShenyuClientIllegalArgumentException;
 import org.apache.shenyu.client.core.register.RefreshedShenyuClientRegister;
+import org.apache.shenyu.client.dubbo.common.annotation.ShenyuDubboClient;
+import org.apache.shenyu.client.dubbo.common.annotation.ShenyuDubboClientDelegate;
 import org.apache.shenyu.client.dubbo.common.dto.DubboRpcExt;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.common.utils.GsonUtils;
@@ -28,9 +30,11 @@ import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
 import org.apache.shenyu.register.common.dto.URIRegisterDTO;
+import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -49,14 +53,46 @@ public abstract class DubboServiceBeanListener extends RefreshedShenyuClientRegi
     }
     
     /**
-     * Build meta data dto meta data register dto.
+     * Build uri register dto uri register dto.
      *
-     * @param serviceBean  the service bean
-     * @param shenyuClient the shenyu client
-     * @param method       the method
-     * @return the meta data register dto
+     * @param serviceBean the service bean
+     * @return the uri register dto
      */
-    protected MetaDataRegisterDTO buildMetaDataDTO(final ServiceData serviceBean, final ShenyuClient shenyuClient, final Method method) {
+    protected URIRegisterDTO buildURIRegisterDTO(final ServiceBeanData serviceBean) {
+        return URIRegisterDTO.builder()
+                .contextPath(this.getContextPath())
+                .appName(this.getAppName(serviceBean.getAppName()))
+                .rpcType(RpcTypeEnum.DUBBO.getName())
+                .host(this.getHost())
+                .port(this.getPort(serviceBean.getPort()))
+                .build();
+    }
+    
+    /**
+     * Check param.
+     */
+    @Override
+    public void checkParam() {
+        if (StringUtils.isAnyBlank(this.getContextPath(), this.getAppName())) {
+            throw new ShenyuClientIllegalArgumentException("apache dubbo client must config the contextPath or appName");
+        }
+    }
+    
+    /**
+     * Build meta data dto list.
+     *
+     * @param serviceBean the service bean
+     * @param clazz       the clazz
+     * @return the list
+     */
+    protected List<MetaDataRegisterDTO> buildMetaDataDTO(final Object serviceBean, final Class<?> clazz) {
+        Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(clazz);
+        return Arrays.stream(methods)
+                .filter(this::isShenyuClientOrOwner)
+                .map(method -> buildMetaDataDTO(new ServiceBeanData(serviceBean), this.getAnnotation(method), method)).collect(Collectors.toList());
+    }
+    
+    private MetaDataRegisterDTO buildMetaDataDTO(final ServiceBeanData serviceBean, final ShenyuDubboClient shenyuClient, final Method method) {
         String appName = getAppName(serviceBean.getAppName());
         String newPath = StringUtils.isBlank(shenyuClient.path()) ? method.getName() : shenyuClient.path();
         String path = superContext(newPath);
@@ -84,7 +120,7 @@ public abstract class DubboServiceBeanListener extends RefreshedShenyuClientRegi
                 .build();
     }
     
-    private String buildRpcExt(final ServiceData serviceBean) {
+    private String buildRpcExt(final ServiceBeanData serviceBean) {
         DubboRpcExt build = DubboRpcExt.builder()
                 .group(serviceBean.getGroup())
                 .version(serviceBean.getVersion())
@@ -98,33 +134,30 @@ public abstract class DubboServiceBeanListener extends RefreshedShenyuClientRegi
         return GsonUtils.getInstance().toJson(build);
     }
     
-    private String superContext(String path) {
+    private String superContext(final String path) {
         return getContextPath() + path;
     }
     
     /**
-     * Build uri register dto uri register dto.
+     * Delegation t.
      *
-     * @param serviceBean the service bean
-     * @return the uri register dto
+     * @param shenyuClient the client
+     * @return the t
      */
-    protected URIRegisterDTO buildURIRegisterDTO(final ServiceData serviceBean) {
-        return URIRegisterDTO.builder()
-                .contextPath(this.getContextPath())
-                .appName(this.getAppName(serviceBean.getAppName()))
-                .rpcType(RpcTypeEnum.DUBBO.getName())
-                .host(this.getHost())
-                .port(this.getPort(serviceBean.getPort()))
-                .build();
+    @Override
+    @SuppressWarnings("all")
+    protected ShenyuDubboClient delegate(final ShenyuClient shenyuClient) {
+        return new ShenyuDubboClientDelegate(shenyuClient);
     }
     
     /**
-     * Check param.
+     * Gets owner class.
+     *
+     * @return the owner class
      */
     @Override
-    public void checkParam() {
-        if (StringUtils.isAnyBlank(this.getContextPath(), this.getAppName())) {
-            throw new ShenyuClientIllegalArgumentException("apache dubbo client must config the contextPath or appName");
-        }
+    @SuppressWarnings("unchecked")
+    protected Class<ShenyuDubboClient> getOwnerClass() {
+        return ShenyuDubboClient.class;
     }
 }

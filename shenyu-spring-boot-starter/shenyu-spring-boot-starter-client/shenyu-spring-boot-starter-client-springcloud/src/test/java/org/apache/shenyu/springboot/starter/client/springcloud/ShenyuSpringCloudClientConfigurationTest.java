@@ -17,7 +17,6 @@
 
 package org.apache.shenyu.springboot.starter.client.springcloud;
 
-import org.apache.shenyu.client.springcloud.init.ContextRegisterListener;
 import org.apache.shenyu.client.springcloud.init.SpringCloudClientBeanPostProcessor;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,37 +33,29 @@ import static org.junit.Assert.assertNotNull;
 @Configuration
 @EnableConfigurationProperties
 public class ShenyuSpringCloudClientConfigurationTest {
-
+    
     private ApplicationContextRunner applicationContextRunner;
-
+    
     @Before
     public void before() {
         applicationContextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(ShenyuSpringCloudClientConfiguration.class))
-            .withBean(ShenyuSpringCloudClientConfigurationTest.class)
-            .withPropertyValues(
-                "debug=true",
-                "shenyu.register.registerType=http",
-                "shenyu.register.serverLists=http://localhost:9095",
-                "spring.application.name=springcloud",
-                "shenyu.client.springCloud.props[contextPath]=/springcloud",
-                "shenyu.client.springCloud.props[port]=8884"
-            );
+                .withConfiguration(AutoConfigurations.of(ShenyuSpringCloudClientConfiguration.class))
+                .withBean(ShenyuSpringCloudClientConfigurationTest.class)
+                .withPropertyValues(
+                        "debug=true",
+                        "shenyu.register.registerType=http",
+                        "shenyu.register.serverLists=http://localhost:9095",
+                        "spring.application.name=springcloud",
+                        "shenyu.client.springCloud.props[contextPath]=/springcloud",
+                        "shenyu.client.springCloud.props[port]=8884"
+                );
     }
-
+    
     @Test
     public void testSpringCloudClientBeanPostProcessor() {
         applicationContextRunner.run(context -> {
             SpringCloudClientBeanPostProcessor repository = context.getBean("springCloudClientBeanPostProcessor", SpringCloudClientBeanPostProcessor.class);
             assertNotNull(repository);
-        });
-    }
-
-    @Test
-    public void testContextRegisterListener() {
-        applicationContextRunner.run(context -> {
-            ContextRegisterListener listener = context.getBean("contextRegisterListener", ContextRegisterListener.class);
-            assertNotNull(listener);
         });
     }
 }

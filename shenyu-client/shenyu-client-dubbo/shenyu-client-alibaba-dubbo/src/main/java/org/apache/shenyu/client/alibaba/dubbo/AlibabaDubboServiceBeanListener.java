@@ -18,20 +18,14 @@
 package org.apache.shenyu.client.alibaba.dubbo;
 
 import com.alibaba.dubbo.config.spring.ServiceBean;
-import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.dubbo.common.DubboServiceBeanListener;
-import org.apache.shenyu.client.dubbo.common.ServiceData;
-import org.apache.shenyu.client.dubbo.common.ShenyuClientUtils;
-import org.apache.shenyu.client.dubbo.common.annotation.ShenyuDubboClient;
+import org.apache.shenyu.client.dubbo.common.ServiceBeanData;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
 import org.apache.shenyu.register.common.dto.URIRegisterDTO;
 import org.springframework.aop.support.AopUtils;
-import org.springframework.util.ReflectionUtils;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,6 +37,12 @@ import java.util.stream.Stream;
 @SuppressWarnings("all")
 public class AlibabaDubboServiceBeanListener extends DubboServiceBeanListener {
     
+    /**
+     * Instantiates a new Alibaba dubbo service bean listener.
+     *
+     * @param clientConfig                   the client config
+     * @param shenyuClientRegisterRepository the shenyu client register repository
+     */
     public AlibabaDubboServiceBeanListener(final PropertiesConfig clientConfig, final ShenyuClientRegisterRepository shenyuClientRegisterRepository) {
         super(clientConfig, shenyuClientRegisterRepository);
     }
@@ -50,26 +50,22 @@ public class AlibabaDubboServiceBeanListener extends DubboServiceBeanListener {
     /**
      * Gets meta data dto.
      *
+     * @param applicationContext the object
      * @return the meta data dto
      */
     @Override
-    @SuppressWarnings("all")
-    public List<MetaDataRegisterDTO> getMetaDataDto() {
+    public List<MetaDataRegisterDTO> getMetaDataDto(final Object applicationContext) {
         Map<String, ServiceBean> beans = this.getBeansOfType(ServiceBean.class);
         return beans.values().stream().flatMap(this::buildMetaData).collect(Collectors.toList());
     }
     
-    private Stream<MetaDataRegisterDTO> buildMetaData(ServiceBean<?> serviceBean) {
+    private Stream<MetaDataRegisterDTO> buildMetaData(final ServiceBean<?> serviceBean) {
         Object refProxy = serviceBean.getRef();
         Class<?> clazz = refProxy.getClass();
         if (AopUtils.isAopProxy(clazz)) {
             clazz = AopUtils.getTargetClass(refProxy);
         }
-        Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(clazz);
-        return Arrays.stream(methods)
-                .filter(method -> method.isAnnotationPresent(ShenyuDubboClient.class)
-                        || method.isAnnotationPresent(ShenyuClient.class))
-                .map(method -> buildMetaDataDTO(new ServiceData(serviceBean), ShenyuClientUtils.getShenyuClient(method), method));
+        return buildMetaDataDTO(serviceBean, clazz).stream();
     }
     
     /**
@@ -82,7 +78,7 @@ public class AlibabaDubboServiceBeanListener extends DubboServiceBeanListener {
     public URIRegisterDTO getRegisterDto() {
         Map<String, ServiceBean> beans = this.getBeansOfType(ServiceBean.class);
         return beans.values().stream().findFirst().map(e -> {
-            return this.buildURIRegisterDTO(new ServiceData(e));
+            return this.buildURIRegisterDTO(new ServiceBeanData(e));
         }).orElse(null);
     }
 }

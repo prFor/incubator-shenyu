@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.dubbo.common.annotation.ShenyuDubboClient;
 import org.apache.shenyu.examples.dubbo.api.entity.ComplexBeanTest;
 import org.apache.shenyu.examples.dubbo.api.entity.DubboTest;
@@ -36,13 +37,13 @@ import org.springframework.stereotype.Service;
 public class DubboMultiParamServiceImpl implements DubboMultiParamService {
     
     @Override
-    @ShenyuDubboClient(path = "/findByIdsAndName", desc = "findByIdsAndName")
+    @ShenyuClient(path = "/findByIdsAndName", desc = "findByIdsAndName")
     public DubboTest findByIdsAndName(final List<Integer> ids, final String name) {
         return new DubboTest(ids.toString(), "hello world shenyu apache dubbo param findByIdsAndName ：" + name);
     }
     
     @Override
-    @ShenyuDubboClient(path = "/findByArrayIdsAndName", desc = "findByArrayIdsAndName")
+    @ShenyuClient
     public DubboTest findByArrayIdsAndName(final Integer[] ids, final String name) {
         return new DubboTest(Arrays.toString(ids), "hello world shenyu apache dubbo param findByArrayIdsAndName ：" + name);
     }
