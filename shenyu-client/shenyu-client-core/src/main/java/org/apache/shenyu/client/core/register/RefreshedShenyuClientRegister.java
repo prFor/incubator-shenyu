@@ -153,21 +153,4 @@ public abstract class RefreshedShenyuClientRegister extends AbstractShenyuClient
      */
     @Override
     public abstract List<MetaDataRegisterDTO> getMetaDataDto(Object applicationContext);
-    
-    /**
-     * Delegation t.
-     *
-     * @param <T>    the type parameter
-     * @param client the client
-     * @return the t
-     */
-    protected abstract <T extends Annotation> T delegate(ShenyuClient client);
-    
-    /**
-     * Gets owner class.
-     *
-     * @param <T> the type parameter
-     * @return the owner class
-     */
-    protected abstract <T extends Annotation> Class<T> getOwnerClass();
 }

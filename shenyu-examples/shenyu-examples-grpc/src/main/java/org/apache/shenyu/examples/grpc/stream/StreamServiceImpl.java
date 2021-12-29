@@ -18,6 +18,7 @@
 package org.apache.shenyu.examples.grpc.stream;
 
 import io.grpc.stub.StreamObserver;
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.grpc.common.annotation.ShenyuGrpcClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,8 @@ public class StreamServiceImpl extends StreamServiceGrpc.StreamServiceImplBase {
     private static final Logger LOG = LoggerFactory.getLogger(StreamServiceImpl.class);
     
     @Override
-    @ShenyuGrpcClient(path = "/unaryFun", desc = "unaryFun")
+//    @ShenyuGrpcClient(path = "/unaryFun", desc = "unaryFun")
+    @ShenyuClient
     public void unaryFun(final RequestData request, final StreamObserver<ResponseData> responseObserver) {
         LOG.info("unaryFun received：{}", request.getText());
         
@@ -44,7 +46,7 @@ public class StreamServiceImpl extends StreamServiceGrpc.StreamServiceImplBase {
     }
     
     @Override
-    @ShenyuGrpcClient(path = "/serverStreamingFun", desc = "serverStreamingFun")
+    @ShenyuClient(path = "/serverStreamingFun", desc = "serverStreamingFun")
     public void serverStreamingFun(final RequestData request, final StreamObserver<ResponseData> responseObserver) {
         LOG.info("serverStreamingFun received：{}", request.getText());
         

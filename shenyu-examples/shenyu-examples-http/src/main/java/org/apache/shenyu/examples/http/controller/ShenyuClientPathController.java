@@ -18,6 +18,7 @@
 
 package org.apache.shenyu.examples.http.controller;
 
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.springmvc.annotation.ShenyuSpringMvcClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,7 +38,8 @@ public class ShenyuClientPathController {
      * @return result
      */
     @RequestMapping("shenyu/client/hello")
-    @ShenyuSpringMvcClient(path = "shenyu/client/hello", desc = "shenyu client annotation register")
+//    @ShenyuSpringMvcClient(path = "shenyu/client/hello", desc = "shenyu client annotation register")
+    @ShenyuClient
     public String hello() {
         return "hello! " + HELLO_SUFFIX;
     }
@@ -50,6 +52,7 @@ public class ShenyuClientPathController {
      * @return result
      */
     @RequestMapping("shenyu/client/hi")
+    @ShenyuClient(path = "shenyu/client/hi")
     public String hello(final String name) {
         return "hi! " + name + "! " + HELLO_SUFFIX;
     }

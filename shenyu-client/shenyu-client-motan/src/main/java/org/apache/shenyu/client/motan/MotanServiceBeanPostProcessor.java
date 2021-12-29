@@ -34,6 +34,9 @@ import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
 import org.apache.shenyu.register.common.dto.URIRegisterDTO;
 import org.springframework.aop.support.AopUtils;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
 import org.springframework.util.ReflectionUtils;
 
@@ -47,7 +50,7 @@ import java.util.stream.Collectors;
 /**
  * Motan BeanPostProcessor.
  */
-public class MotanServiceBeanPostProcessor extends BeanPostShenyuClientRegister {
+public class MotanServiceBeanPostProcessor extends BeanPostShenyuClientRegister implements ApplicationContextAware {
     
     private static final String BASE_SERVICE_CONFIG = "baseServiceConfig";
     
@@ -82,14 +85,6 @@ public class MotanServiceBeanPostProcessor extends BeanPostShenyuClientRegister 
                                                  final ShenyuMotanClient shenyuMotanClient,
                                                  final Method method,
                                                  final String rpcExt) {
-        String appName = this.getAppName();
-        String path = this.getContextPath() + shenyuMotanClient.path();
-        String desc = shenyuMotanClient.desc();
-        String host = this.getHost();
-        int port = this.getPort(-1);
-        String configRuleName = shenyuMotanClient.ruleName();
-        String ruleName = ("".equals(configRuleName)) ? path : configRuleName;
-        String methodName = method.getName();
         Class<?>[] parameterTypesClazz = method.getParameterTypes();
         String parameterTypes = Arrays.stream(parameterTypesClazz).map(Class::getName)
                 .collect(Collectors.joining(","));
@@ -104,21 +99,11 @@ public class MotanServiceBeanPostProcessor extends BeanPostShenyuClientRegister 
         } else {
             serviceName = service.interfaceClass().getName();
         }
-        return MetaDataRegisterDTO.builder()
-                .appName(appName)
-                .serviceName(serviceName)
-                .methodName(methodName)
-                .contextPath(this.getContextPath())
-                .path(path)
-                .port(port)
-                .host(host)
-                .ruleName(ruleName)
-                .pathDesc(desc)
+        MetaDataRegisterDTO.Builder builder = this.universalMeta(shenyuMotanClient, method);
+        return builder.serviceName(serviceName)
                 .parameterTypes(parameterTypes)
                 .rpcType(RpcTypeEnum.MOTAN.getName())
-                .rpcExt(rpcExt)
-                .enabled(shenyuMotanClient.enabled())
-                .build();
+                .rpcExt(rpcExt).build();
     }
     
     private MotanRpcExt.RpcExt buildRpcExt(final Method method) {
@@ -140,9 +125,11 @@ public class MotanServiceBeanPostProcessor extends BeanPostShenyuClientRegister 
         return GsonUtils.getInstance().toJson(buildList);
     }
     
-    /**
-     * Check param.
-     */
+    @Override
+    public void setApplicationContext(final ApplicationContext applicationContext) {
+        super.setApplicationContext(applicationContext);
+    }
+    
     @Override
     public void checkParam() {
         if (StringUtils.isEmpty(this.getContextPath())) {
@@ -150,12 +137,6 @@ public class MotanServiceBeanPostProcessor extends BeanPostShenyuClientRegister 
         }
     }
     
-    /**
-     * Gets meta data dto.
-     *
-     * @param bean the object
-     * @return the meta data dto
-     */
     @Override
     public List<MetaDataRegisterDTO> getMetaDataDto(final Object bean) {
         Class<?> clazz = bean.getClass();
@@ -169,32 +150,16 @@ public class MotanServiceBeanPostProcessor extends BeanPostShenyuClientRegister 
         return Collections.emptyList();
     }
     
-    /**
-     * Delegation t.
-     *
-     * @param client the client
-     * @return the t
-     */
     @Override
     protected ShenyuMotanClient delegate(final ShenyuClient client) {
         return new ShenyuMotanClientDelegate(client);
     }
     
-    /**
-     * Gets owner class.
-     *
-     * @return the owner class
-     */
     @Override
     protected Class<ShenyuMotanClient> getOwnerClass() {
         return ShenyuMotanClient.class;
     }
     
-    /**
-     * Gets register dto.
-     *
-     * @return the register dto
-     */
     @Override
     public URIRegisterDTO getRegisterDto() {
         return null;

@@ -18,6 +18,8 @@
 package org.apache.shenyu.client.core.register;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.reflect.MethodUtils;
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
 import org.apache.shenyu.client.core.disruptor.ShenyuClientRegisterEventPublisher;
 import org.apache.shenyu.common.utils.IpUtils;
@@ -26,6 +28,8 @@ import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
 import org.apache.shenyu.register.common.dto.URIRegisterDTO;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -62,7 +66,6 @@ public abstract class AbstractShenyuClientRegister implements ShenyuClientRegist
         setHost(props.getProperty(ShenyuClientConstants.HOST));
         setPort(props.getProperty(ShenyuClientConstants.PORT));
         publisher.start(shenyuClientRegisterRepository);
-        this.checkParam();
     }
     
     /**
@@ -157,10 +160,25 @@ public abstract class AbstractShenyuClientRegister implements ShenyuClientRegist
         return StringUtils.isBlank(this.port) ? defaultValue : Integer.parseInt(this.port);
     }
     
+    /**
+     * If your path is empty, take the name of the method.
+     * (path is null or empty) return method.getName().
+     *
+     * @param method the method
+     * @param path   the path
+     * @return the string (path is null or empty) return method.getName();
+     */
+    public String formatPath(Method method, String path) {
+        return StringUtils.defaultIfBlank(path, "/" + method.getName());
+    }
+    
     @Override
     public void registerMetaData(final Object object) {
+        this.checkParam();
         List<MetaDataRegisterDTO> metas = this.getMetaDataDto(object);
-        metas.forEach(this::publishEvent);
+        if (metas != null && !metas.isEmpty()) {
+            metas.forEach(this::publishEvent);
+        }
     }
     
     /**
@@ -174,6 +192,12 @@ public abstract class AbstractShenyuClientRegister implements ShenyuClientRegist
         }
     }
     
+    /**
+     * Publish event.
+     *
+     * @param <T> the type parameter
+     * @param dto the dto
+     */
     <T> void publishEvent(final T dto) {
         this.publisher.publishEvent(dto);
     }
@@ -187,9 +211,89 @@ public abstract class AbstractShenyuClientRegister implements ShenyuClientRegist
         return registered.compareAndSet(false, true);
     }
     
+    /**
+     * Universal meta meta data register dto . builder.
+     * appName=getAppName
+     * host=getHost
+     * port=getPort(-1)
+     * methodName=method.name()
+     * pathDesc=annotation.desc()
+     * ruleName=annotation.ruleName()
+     * enable=annotation.enable()
+     * path=getContextPath()+annotation.path()
+     * contextPath=getContextPath()
+     *
+     * @param annotation the shenyu client delegate
+     * @param method     the method
+     * @return the meta data register dto . builder
+     */
+    protected MetaDataRegisterDTO.Builder universalMeta(final Annotation annotation, final Method method) {
+        String dlPath = this.getContextPath();
+        String desc = "";
+        boolean enable = false;
+        String ruleName = "";
+        if (annotation != null) {
+            try {
+                dlPath = (String) MethodUtils.invokeMethod(annotation, "path");
+                desc = (String) MethodUtils.invokeMethod(annotation, "desc");
+                ruleName = (String) MethodUtils.invokeMethod(annotation, "ruleName");
+                enable = (Boolean) MethodUtils.invokeMethod(annotation, "enabled");
+            } catch (Exception ignored) {
+                //There should be no exception.
+            }
+        }
+        String path = dlPath;
+        String methodName = null;
+        if (method != null) {
+            path = this.getContextPath() + formatPath(method, dlPath);
+            methodName = method.getName();
+        }
+        ruleName = formatRuleName(ruleName, path);
+        return MetaDataRegisterDTO.builder()
+                .appName(this.getAppName())
+                .host(this.getHost())
+                .port(this.getPort(-1))
+                .methodName(methodName)
+                .pathDesc(desc)
+                .path(path)
+                .enabled(enable)
+                .ruleName(ruleName)
+                .contextPath(this.getContextPath());
+    }
+    
+    protected MetaDataRegisterDTO.Builder universalMeta(final Annotation annotation) {
+        return this.universalMeta(annotation, null);
+    }
+    
+    protected MetaDataRegisterDTO.Builder universalMeta() {
+        return this.universalMeta(null, null);
+    }
+    
+    
+    private String formatRuleName(String ruleName, String path) {
+        return StringUtils.defaultIfBlank(ruleName, path);
+    }
+    
+    /**
+     * Delegation t.
+     *
+     * @param <T>    the type parameter
+     * @param client the client
+     * @return the t
+     */
+    protected abstract <T extends Annotation> T delegate(ShenyuClient client);
+    
+    /**
+     * Gets owner class.
+     *
+     * @param <T> the type parameter
+     * @return the owner class
+     */
+    protected abstract <T extends Annotation> Class<T> getOwnerClass();
     
     /**
      * Check param.
      */
-    public abstract void checkParam();
+    public void checkParam() {
+    }
 }

@@ -169,15 +169,8 @@ public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegi
             return Collections.emptyList();
         }
         isFullTrue = true;
-        String contextPath = this.getContextPath();
-        MetaDataRegisterDTO build = MetaDataRegisterDTO.builder()
-                .contextPath(contextPath)
-                .appName(this.getAppName())
-                .path(contextPath)
-                .rpcType(RpcTypeEnum.SPRING_CLOUD.getName())
-                .enabled(true)
-                .ruleName(contextPath)
-                .build();
+        MetaDataRegisterDTO build = this.universalMeta().enabled(true)
+                .rpcExt(RpcTypeEnum.SPRING_CLOUD.getName()).build();
         return Collections.singletonList(build);
     }
     
@@ -200,6 +193,7 @@ public class SpringCloudClientBeanPostProcessor extends BeanPostShenyuClientRegi
                 .port(this.getPort())
                 .rpcType(RpcTypeEnum.SPRING_CLOUD.getName())
                 .build();
+        
     }
     
     @Override

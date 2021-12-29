@@ -42,13 +42,13 @@ public class ShenyuClientUtils {
                                                            final Class<T> annotationClazz,
                                                            final Function<ShenyuClient, T> delegation) {
         ShenyuClient shenyuClient = clazz.getAnnotation(ShenyuClient.class);
-        T shenyuGrpcClient;
+        T ownerClient;
         if (shenyuClient == null) {
-            shenyuGrpcClient = clazz.getAnnotation(annotationClazz);
+            ownerClient = clazz.getAnnotation(annotationClazz);
         } else {
-            shenyuGrpcClient = delegation.apply(shenyuClient);
+            ownerClient = delegation.apply(shenyuClient);
         }
-        return shenyuGrpcClient;
+        return ownerClient;
     }
     
     /**
@@ -64,13 +64,13 @@ public class ShenyuClientUtils {
                                                            final Class<T> annotationClazz,
                                                            final Function<ShenyuClient, T> delegation) {
         ShenyuClient shenyuClient = method.getAnnotation(ShenyuClient.class);
-        T shenyuGrpcClient;
+        T ownerClient;
         if (shenyuClient == null) {
-            shenyuGrpcClient = method.getAnnotation(annotationClazz);
+            ownerClient = method.getAnnotation(annotationClazz);
         } else {
-            shenyuGrpcClient = delegation.apply(shenyuClient);
+            ownerClient = delegation.apply(shenyuClient);
         }
-        return shenyuGrpcClient;
+        return ownerClient;
     }
     
     /**

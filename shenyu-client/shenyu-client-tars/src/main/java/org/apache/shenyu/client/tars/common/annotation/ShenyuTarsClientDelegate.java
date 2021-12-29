@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.shenyu.client.dubbo.common.annotation;
+package org.apache.shenyu.client.tars.common.annotation;
 
 import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.core.annotaion.ShenyuClientDelegate;
@@ -23,13 +23,13 @@ import org.apache.shenyu.client.core.annotaion.ShenyuClientDelegate;
 import java.lang.annotation.Annotation;
 
 /**
- * ShenyuDubboClientDelegation .
+ * ShenyuTarsClientDelegate .
  */
-public class ShenyuDubboClientDelegate implements ShenyuClientDelegate, ShenyuDubboClient {
+public class ShenyuTarsClientDelegate implements ShenyuClientDelegate, ShenyuTarsClient {
     
     private final ShenyuClient shenyuClient;
     
-    public ShenyuDubboClientDelegate(final ShenyuClient shenyuClient) {
+    public ShenyuTarsClientDelegate(final ShenyuClient shenyuClient) {
         this.shenyuClient = shenyuClient;
     }
     
@@ -80,6 +80,6 @@ public class ShenyuDubboClientDelegate implements ShenyuClientDelegate, ShenyuDu
      */
     @Override
     public Class<? extends Annotation> annotationType() {
-        return ShenyuDubboClient.class;
+        return ShenyuTarsClient.class;
     }
 }

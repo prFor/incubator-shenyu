@@ -83,20 +83,11 @@ public class SofaServiceBeanPostProcessor extends BeanPostShenyuClientRegister {
         Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(clazz);
         return Arrays.stream(methods)
                 .filter(this::isShenyuClientOrOwner)
-                .map(method -> buildMetaDataDTO(serviceBean,
-                        this.getAnnotation(method), method)).collect(Collectors.toList());
+                .map(method -> buildMetaDataDTO(serviceBean, this.getAnnotation(method), method)).collect(Collectors.toList());
     }
     
     private MetaDataRegisterDTO buildMetaDataDTO(final ServiceFactoryBean serviceBean, final ShenyuSofaClient shenyuSofaClient, final Method method) {
-//        String appName = this.getAppName();
-//        String path = this.getContextPath() + shenyuSofaClient.path();
-//        String desc = shenyuSofaClient.desc();
-//        String serviceName = serviceBean.getInterfaceClass().getName();
-//        String host = this.getHost();
-//        int port = this.getPort();
-        String configRuleName = shenyuSofaClient.ruleName();
-        String ruleName = ("".equals(configRuleName)) ? path : configRuleName;
-        String methodName = method.getName();
+        String serviceName = serviceBean.getInterfaceClass().getName();
         String parameterTypes = Arrays.stream(method.getParameters())
                 .map(parameter -> {
                     StringBuilder result = new StringBuilder(parameter.getType().getName());
@@ -109,21 +100,12 @@ public class SofaServiceBeanPostProcessor extends BeanPostShenyuClientRegister {
                     }
                     return result.toString();
                 }).collect(Collectors.joining(","));
-        return MetaDataRegisterDTO.builder()
-                .appName(appName)
+        
+        return this.universalMeta(shenyuSofaClient, method)
                 .serviceName(serviceName)
-                .methodName(methodName)
-                .contextPath(this.getContextPath())
-                .host(host)
-                .port(port)
-                .path(path)
-                .ruleName(ruleName)
-                .pathDesc(desc)
                 .parameterTypes(parameterTypes)
                 .rpcType(RpcTypeEnum.SOFA.getName())
-                .rpcExt(buildRpcExt(shenyuSofaClient))
-                .enabled(shenyuSofaClient.enabled())
-                .build();
+                .rpcExt(buildRpcExt(shenyuSofaClient)).build();
     }
     
     private String buildRpcExt(final ShenyuSofaClient shenyuSofaClient) {
@@ -135,9 +117,6 @@ public class SofaServiceBeanPostProcessor extends BeanPostShenyuClientRegister {
         return GsonUtils.getInstance().toJson(build);
     }
     
-    /**
-     * Check param.
-     */
     @Override
     public void checkParam() {
         if (StringUtils.isEmpty(this.getContextPath())) {
@@ -145,12 +124,6 @@ public class SofaServiceBeanPostProcessor extends BeanPostShenyuClientRegister {
         }
     }
     
-    /**
-     * Gets meta data dto.
-     *
-     * @param bean the object
-     * @return the meta data dto
-     */
     @Override
     public List<MetaDataRegisterDTO> getMetaDataDto(final Object bean) {
         if (bean instanceof ServiceFactoryBean) {
@@ -159,33 +132,16 @@ public class SofaServiceBeanPostProcessor extends BeanPostShenyuClientRegister {
         return Collections.emptyList();
     }
     
-    /**
-     * Delegation t.
-     *
-     * @param client the client
-     * @return the t
-     */
     @Override
     protected ShenyuSofaClient delegate(final ShenyuClient client) {
         return new ShenyuSofaClientDelegate(client);
     }
     
-    /**
-     * Gets owner class.
-     *
-     * @return the owner class
-     */
     @Override
     protected Class<ShenyuSofaClient> getOwnerClass() {
         return ShenyuSofaClient.class;
     }
     
-    /**
-     * Gets register dto.
-     *
-     * @return the register dto，It may return null,
-     * and some services do not need to register the URIRegisterDTO object.
-     */
     @Override
     public URIRegisterDTO getRegisterDto() {
         return null;

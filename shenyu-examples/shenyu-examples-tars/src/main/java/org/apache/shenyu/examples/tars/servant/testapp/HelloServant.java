@@ -28,7 +28,11 @@ import com.qq.tars.protocol.tars.annotation.TarsMethodParameter;
 public interface HelloServant {
 
     String hello(@TarsMethodParameter(name = "no") int no, @TarsMethodParameter(name = "name") String name);
-
+    
+    String hello2(@TarsMethodParameter(name = "no") int no, @TarsMethodParameter(name = "name") String name);
+    
+    String hello3(@TarsMethodParameter(name = "no") int no, @TarsMethodParameter(name = "name") String name);
+    
     int helloInt(@TarsMethodParameter(name = "no") int no, @TarsMethodParameter(name = "name") String name);
 
 }

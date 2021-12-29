@@ -92,32 +92,16 @@ public abstract class DubboServiceBeanListener extends RefreshedShenyuClientRegi
                 .map(method -> buildMetaDataDTO(new ServiceBeanData(serviceBean), this.getAnnotation(method), method)).collect(Collectors.toList());
     }
     
-    private MetaDataRegisterDTO buildMetaDataDTO(final ServiceBeanData serviceBean, final ShenyuDubboClient shenyuClient, final Method method) {
-        String appName = getAppName(serviceBean.getAppName());
-        String newPath = StringUtils.isBlank(shenyuClient.path()) ? method.getName() : shenyuClient.path();
-        String path = superContext(newPath);
-        String desc = shenyuClient.desc();
+    private MetaDataRegisterDTO buildMetaDataDTO(final ServiceBeanData serviceBean, final ShenyuDubboClient shenyuDubboClient, final Method method) {
         String serviceName = serviceBean.getInterface();
-        String configRuleName = shenyuClient.ruleName();
-        String ruleName = ("".equals(configRuleName)) ? path : configRuleName;
-        String methodName = method.getName();
         Class<?>[] parameterTypesClazz = method.getParameterTypes();
         String parameterTypes = Arrays.stream(parameterTypesClazz).map(Class::getName).collect(Collectors.joining(","));
-        return MetaDataRegisterDTO.builder()
-                .appName(appName)
+        return this.universalMeta(shenyuDubboClient, method)
                 .serviceName(serviceName)
-                .methodName(methodName)
-                .contextPath(this.getContextPath())
-                .host(getHost())
                 .port(getPort(serviceBean.getPort()))
-                .path(path)
-                .ruleName(ruleName)
-                .pathDesc(desc)
                 .parameterTypes(parameterTypes)
-                .rpcExt(buildRpcExt(serviceBean))
                 .rpcType(RpcTypeEnum.DUBBO.getName())
-                .enabled(shenyuClient.enabled())
-                .build();
+                .rpcExt(buildRpcExt(serviceBean)).build();
     }
     
     private String buildRpcExt(final ServiceBeanData serviceBean) {
@@ -132,10 +116,6 @@ public abstract class DubboServiceBeanListener extends RefreshedShenyuClientRegi
                 .url("")
                 .build();
         return GsonUtils.getInstance().toJson(build);
-    }
-    
-    private String superContext(final String path) {
-        return getContextPath() + path;
     }
     
     /**

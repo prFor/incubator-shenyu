@@ -18,6 +18,7 @@
 package org.apache.shenyu.examples.tars.servant.testapp.impl;
 
 import com.qq.tars.spring.annotation.TarsServant;
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.tars.common.annotation.ShenyuTarsClient;
 import org.apache.shenyu.client.tars.common.annotation.ShenyuTarsService;
 import org.apache.shenyu.examples.tars.servant.testapp.HelloServant;
@@ -25,13 +26,25 @@ import org.apache.shenyu.examples.tars.servant.testapp.HelloServant;
 @TarsServant("HelloObj")
 @ShenyuTarsService(serviceName = "ShenyuExampleServer.ShenyuExampleApp.HelloObj")
 public class HelloServantImpl implements HelloServant {
-
+    
     @Override
     @ShenyuTarsClient(path = "/hello", desc = "hello")
     public String hello(final int no, final String name) {
         return String.format("hello no=%s, name=%s, time=%s", no, name, System.currentTimeMillis());
     }
-
+    
+    @Override
+    @ShenyuClient(path = "/hello2", desc = "hello")
+    public String hello2(final int no, final String name) {
+        return String.format("hello2 no=%s, name=%s, time=%s", no, name, System.currentTimeMillis());
+    }
+    
+    @Override
+    @ShenyuClient
+    public String hello3(final int no, final String name) {
+        return String.format("hello3 no=%s, name=%s, time=%s", no, name, System.currentTimeMillis());
+    }
+    
     @Override
     @ShenyuTarsClient(path = "/helloInt", desc = "helloInt")
     public int helloInt(final int no, final String name) {

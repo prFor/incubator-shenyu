@@ -17,6 +17,7 @@
 
 package org.apache.shenyu.examples.sofa.service.impl;
 
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.sofa.common.annotation.ShenyuSofaClient;
 import org.apache.shenyu.examples.sofa.api.entity.SofaComplexTypeBean;
 import org.apache.shenyu.examples.sofa.api.entity.SofaSimpleTypeBean;
@@ -35,31 +36,31 @@ import java.util.stream.Collectors;
  */
 @Service("sofaMultiParamService")
 public class SofaMultiParamServiceImpl implements SofaMultiParamService {
-
+    
     @Override
-    @ShenyuSofaClient(path = "/findByIdsAndName", desc = "findByIdsAndName")
+    @ShenyuClient
     public SofaSimpleTypeBean findByIdsAndName(final List<Integer> ids, final String name) {
         return new SofaSimpleTypeBean(ids.toString(), "hello world shenyu sofa param findByIdsAndName ：" + name);
     }
-
+    
     @Override
-    @ShenyuSofaClient(path = "/findByArrayIdsAndName", desc = "findByIdsAndName")
+    @ShenyuClient(path = "/findByArrayIdsAndName", desc = "findByIdsAndName")
     public SofaSimpleTypeBean findByArrayIdsAndName(final Integer[] ids, final String name) {
         return new SofaSimpleTypeBean(Arrays.toString(ids), "hello world shenyu sofa param findByArrayIdsAndName ：" + name);
     }
-
+    
     @Override
     @ShenyuSofaClient(path = "/findByStringArray", desc = "findByStringArray")
     public SofaSimpleTypeBean findByStringArray(final String[] ids) {
         return new SofaSimpleTypeBean(Arrays.toString(ids), "hello world shenyu sofa param findByStringArray");
     }
-
+    
     @Override
     @ShenyuSofaClient(path = "/findByListId", desc = "findByListId")
     public SofaSimpleTypeBean findByListId(final List<String> ids) {
         return new SofaSimpleTypeBean(ids.toString(), "hello world shenyu sofa param findByListId");
     }
-
+    
     @Override
     @ShenyuSofaClient(path = "/batchSave", desc = "batchSave")
     public SofaSimpleTypeBean batchSave(final List<SofaSimpleTypeBean> sofaTestList) {
@@ -70,7 +71,7 @@ public class SofaMultiParamServiceImpl implements SofaMultiParamService {
                 .collect(Collectors.joining("-"));
         return new SofaSimpleTypeBean(id, name);
     }
-
+    
     @Override
     @ShenyuSofaClient(path = "/batchSaveNameAndId", desc = "batchSaveNameAndId")
     public SofaSimpleTypeBean batchSaveNameAndId(final List<SofaSimpleTypeBean> sofaTestList, final String id, final String name) {
@@ -80,7 +81,7 @@ public class SofaMultiParamServiceImpl implements SofaMultiParamService {
                 .collect(Collectors.joining("-"));
         return new SofaSimpleTypeBean(id, newName);
     }
-
+    
     @Override
     @ShenyuSofaClient(path = "/saveComplexBean", desc = "saveComplexBean")
     public SofaSimpleTypeBean saveComplexBean(final SofaComplexTypeBean sofaComplexTypeBean) {
@@ -88,7 +89,7 @@ public class SofaMultiParamServiceImpl implements SofaMultiParamService {
         final String typeName = "hello world shenyu sofa param saveComplexBean :" + sofaComplexTypeBean.getSofaSimpleTypeBean().getName();
         return new SofaSimpleTypeBean(id, typeName);
     }
-
+    
     @Override
     @ShenyuSofaClient(path = "/saveComplexBeanAndName", desc = "saveComplexBeanAndName")
     public SofaSimpleTypeBean saveComplexBeanAndName(final SofaComplexTypeBean sofaComplexTypeBean, final String name) {
@@ -96,7 +97,7 @@ public class SofaMultiParamServiceImpl implements SofaMultiParamService {
         final String typeName = "hello world shenyu sofa param saveComplexBeanAndName :" + sofaComplexTypeBean.getSofaSimpleTypeBean().getName() + "-" + name;
         return new SofaSimpleTypeBean(id, typeName);
     }
-
+    
     @Override
     @ShenyuSofaClient(path = "/saveTwoList", desc = "saveTwoList")
     public SofaSimpleTypeBean saveTwoList(final List<SofaComplexTypeBean> sofaComplexTypeBeanList, final Map<String, SofaSimpleTypeBean> sofaSimpleTypeBeanMap) {

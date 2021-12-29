@@ -33,37 +33,29 @@ import static org.junit.Assert.assertNotNull;
 @Configuration
 @EnableConfigurationProperties
 public class ShenyuSpringMvcClientConfigurationTest {
-
+    
     private ApplicationContextRunner applicationContextRunner;
-
+    
     @Before
     public void before() {
         applicationContextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(ShenyuSpringMvcClientConfiguration.class))
-            .withBean(ShenyuSpringMvcClientConfigurationTest.class)
-            .withPropertyValues(
-                "debug=true",
-                "shenyu.register.registerType=http",
-                "shenyu.register.serverLists=http://localhost:9095",
-                "shenyu.client.http.props[contextPath]=/http",
-                "shenyu.client.http.props[appName]=http",
-                "shenyu.client.http.props[port]=8189"
-            );
+                .withConfiguration(AutoConfigurations.of(ShenyuSpringMvcClientConfiguration.class))
+                .withBean(ShenyuSpringMvcClientConfigurationTest.class)
+                .withPropertyValues(
+                        "debug=true",
+                        "shenyu.register.registerType=http",
+                        "shenyu.register.serverLists=http://localhost:9095",
+                        "shenyu.client.http.props[contextPath]=/http",
+                        "shenyu.client.http.props[appName]=http",
+                        "shenyu.client.http.props[port]=8189"
+                );
     }
-
+    
     @Test
     public void testSpringMvcClientBeanPostProcessor() {
         applicationContextRunner.run(context -> {
             SpringMvcClientBeanPostProcessor processor = context.getBean("springHttpClientBeanPostProcessor", SpringMvcClientBeanPostProcessor.class);
             assertNotNull(processor);
-        });
-    }
-
-    @Test
-    public void testContextRegisterListener() {
-        applicationContextRunner.run(context -> {
-            ContextRegisterListener listener = context.getBean("contextRegisterListener", ContextRegisterListener.class);
-            assertNotNull(listener);
         });
     }
 }

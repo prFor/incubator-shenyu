@@ -36,7 +36,7 @@ public class ShenyuSpringMvcClientConfiguration {
     /**
      * Spring http client bean post processor spring mvc client bean post processor.
      *
-     * @param clientConfig the client config
+     * @param clientConfig                   the client config
      * @param shenyuClientRegisterRepository the shenyu client register repository
      * @return the spring mvc client bean post processor
      */
@@ -44,16 +44,5 @@ public class ShenyuSpringMvcClientConfiguration {
     public SpringMvcClientBeanPostProcessor springHttpClientBeanPostProcessor(final ShenyuClientConfig clientConfig,
                                                                               final ShenyuClientRegisterRepository shenyuClientRegisterRepository) {
         return new SpringMvcClientBeanPostProcessor(clientConfig.getClient().get(RpcTypeEnum.HTTP.getName()), shenyuClientRegisterRepository);
-    }
-    
-    /**
-     * Context register listener context register listener.
-     *
-     * @param clientConfig the client config
-     * @return the context register listener
-     */
-    @Bean
-    public ContextRegisterListener contextRegisterListener(final ShenyuClientConfig clientConfig) {
-        return new ContextRegisterListener(clientConfig.getClient().get(RpcTypeEnum.HTTP.getName()));
     }
 }

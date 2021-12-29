@@ -15,19 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.shenyu.examples.motan.service;
-
-import com.weibo.api.motan.transport.async.MotanAsync;
+package org.apache.shenyu.client.core.annotaion;
 
 /**
- * Motan demo interface.
+ * ShenyuDelegate .
  */
-@MotanAsync
-public interface MotanDemoService {
-    
-    String hello(String name);
-    
-    String hello2(String name);
-    
-    String hello3(String name);
+public interface ShenyuClientDelegate extends ShenyuClient{
 }

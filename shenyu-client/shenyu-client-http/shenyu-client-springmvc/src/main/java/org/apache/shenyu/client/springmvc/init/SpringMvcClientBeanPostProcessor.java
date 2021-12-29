@@ -90,9 +90,6 @@ public class SpringMvcClientBeanPostProcessor extends BeanPostShenyuClientRegist
         this.protocol = clientConfig.getProps().getProperty(ShenyuClientConstants.PROTOCOL, ShenyuClientConstants.HTTP);
     }
     
-    /**
-     * Check param.
-     */
     @Override
     public void checkParam() {
         if (StringUtils.isBlank(this.getAppName()) && StringUtils.isBlank(this.getContextPath())) {
@@ -107,12 +104,6 @@ public class SpringMvcClientBeanPostProcessor extends BeanPostShenyuClientRegist
         }
     }
     
-    /**
-     * Gets meta data dto.
-     *
-     * @param bean the object
-     * @return the meta data dto
-     */
     @Override
     public List<MetaDataRegisterDTO> getMetaDataDto(final Object bean) {
         if (Boolean.TRUE.equals(isFull) || !hasAnnotation(bean.getClass(), Controller.class)) {
@@ -200,41 +191,38 @@ public class SpringMvcClientBeanPostProcessor extends BeanPostShenyuClientRegist
     }
     
     private MetaDataRegisterDTO buildMetaDataDTO(@NonNull final ShenyuSpringMvcClient shenyuSpringMvcClient, final String path) {
-        return MetaDataRegisterDTO.builder()
-                .contextPath(this.getContextPath())
-                .appName(this.getAppName())
+        MetaDataRegisterDTO.Builder builder = this.universalMeta(shenyuSpringMvcClient);
+        return builder.rpcType(RpcTypeEnum.HTTP.getName())
                 .path(path)
-                .pathDesc(shenyuSpringMvcClient.desc())
-                .rpcType(RpcTypeEnum.HTTP.getName())
-                .enabled(shenyuSpringMvcClient.enabled())
                 .ruleName(StringUtils.defaultIfBlank(shenyuSpringMvcClient.ruleName(), path))
-                .registerMetaData(shenyuSpringMvcClient.registerMetaData())
-                .build();
+                .registerMetaData(shenyuSpringMvcClient.registerMetaData()).build();
     }
     
     private List<MetaDataRegisterDTO> buildMetaDataDTO() {
         if (isFullTrue) {
             return Collections.emptyList();
         }
-        MetaDataRegisterDTO registerDTO = MetaDataRegisterDTO.builder()
-                .contextPath(this.getContextPath())
-                .appName(this.getAppName())
-                .path(this.getContextPath())
-                .rpcType(RpcTypeEnum.HTTP.getName())
+        isFullTrue = true;
+        MetaDataRegisterDTO.Builder builder = this.universalMeta();
+        MetaDataRegisterDTO registerDTO = builder.rpcExt(RpcTypeEnum.HTTP.getName())
                 .enabled(true)
-                .ruleName(this.getContextPath())
                 .build();
         return Collections.singletonList(registerDTO);
     }
     
-    /**
-     * Gets register dto.
-     *
-     * @return the register dto
-     */
     @Override
     public URIRegisterDTO getRegisterDto() {
         return buildURIRegisterDTO();
+    }
+    
+    @Override
+    protected ShenyuSpringMvcClient delegate(final ShenyuClient shenyuClient) {
+        return new ShenyuSpringMvcClientDelegate(shenyuClient);
+    }
+    
+    @Override
+    protected Class<ShenyuSpringMvcClient> getOwnerClass() {
+        return ShenyuSpringMvcClient.class;
     }
     
     private URIRegisterDTO buildURIRegisterDTO() {
@@ -246,26 +234,5 @@ public class SpringMvcClientBeanPostProcessor extends BeanPostShenyuClientRegist
                 .port(this.getPort())
                 .rpcType(RpcTypeEnum.HTTP.getName())
                 .build();
-    }
-    
-    /**
-     * Delegation t.
-     *
-     * @param shenyuClient the client
-     * @return the t
-     */
-    @Override
-    protected ShenyuSpringMvcClient delegate(final ShenyuClient shenyuClient) {
-        return new ShenyuSpringMvcClientDelegate(shenyuClient);
-    }
-    
-    /**
-     * Gets owner class.
-     *
-     * @return the owner class
-     */
-    @Override
-    protected Class<ShenyuSpringMvcClient> getOwnerClass() {
-        return ShenyuSpringMvcClient.class;
     }
 }

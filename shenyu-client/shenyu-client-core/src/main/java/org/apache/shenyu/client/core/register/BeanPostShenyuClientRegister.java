@@ -17,17 +17,13 @@
 
 package org.apache.shenyu.client.core.register;
 
-import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.util.AntPathMatcher;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
 import java.util.List;
 
 /**
@@ -73,27 +69,5 @@ public abstract class BeanPostShenyuClientRegister extends RefreshedShenyuClient
      */
     @Override
     public abstract List<MetaDataRegisterDTO> getMetaDataDto(Object bean);
-    
-    public MetaDataRegisterDTO buildMetaDataDto(final Object serviceBean, final ShenyuClient shenyuSofaClient, final Method method) {
-        String appName = this.getAppName();
-        String path = this.getContextPath() + shenyuSofaClient.path();
-        String desc = shenyuSofaClient.desc();
-//        String serviceName = serviceBean.getInterfaceClass().getName();
-        String host = this.getHost();
-        String methodName = method.getName();
-        int port = this.getPort();
-        MetaDataRegisterDTO.Builder builder = MetaDataRegisterDTO
-                .builder()
-                .appName(appName)
-                .serviceName("serviceName")
-                .methodName(methodName)
-                .contextPath(this.getContextPath())
-                .host(host)
-                .port(port)
-                .path(path);
-        return builder.build();
-    }
-    
-//    public abstract void metaDataDiff(MetaDataRegisterDTO.Builder);
 }
 
