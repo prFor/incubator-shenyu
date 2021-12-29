@@ -62,6 +62,7 @@ public abstract class AbstractShenyuClientRegister implements ShenyuClientRegist
         setHost(props.getProperty(ShenyuClientConstants.HOST));
         setPort(props.getProperty(ShenyuClientConstants.PORT));
         publisher.start(shenyuClientRegisterRepository);
+        this.checkParam();
     }
     
     /**

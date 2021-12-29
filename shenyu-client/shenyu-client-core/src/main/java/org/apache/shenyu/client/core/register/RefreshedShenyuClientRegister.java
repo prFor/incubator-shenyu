@@ -90,7 +90,6 @@ public abstract class RefreshedShenyuClientRegister extends AbstractShenyuClient
     public void onApplicationEvent(final ContextRefreshedEvent contextRefreshedEvent) {
         this.setApplicationContext(contextRefreshedEvent.getApplicationContext());
         mergeExecute();
-        
     }
     
     /**
@@ -142,8 +141,6 @@ public abstract class RefreshedShenyuClientRegister extends AbstractShenyuClient
         if (!this.isRegistered()) {
             return;
         }
-        //Check the parameters
-        checkParam();
         this.registerMetaData(this.applicationContext);
         this.registerService();
     }

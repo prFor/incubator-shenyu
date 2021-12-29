@@ -51,7 +51,8 @@ public interface ShenyuClientRegister {
     /**
      * Gets register dto.
      *
-     * @return the register dto
+     * @return the register dto，It may return null,
+     * and some services do not need to register the URIRegisterDTO object.
      */
     URIRegisterDTO getRegisterDto();
 }

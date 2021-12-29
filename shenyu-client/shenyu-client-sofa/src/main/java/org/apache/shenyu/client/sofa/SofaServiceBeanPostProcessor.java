@@ -21,10 +21,13 @@ import com.alipay.sofa.runtime.service.component.Service;
 import com.alipay.sofa.runtime.spring.factory.ServiceFactoryBean;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.shenyu.client.core.annotaion.ShenyuClient;
 import org.apache.shenyu.client.core.constant.ShenyuClientConstants;
 import org.apache.shenyu.client.core.exception.ShenyuClientIllegalArgumentException;
 import org.apache.shenyu.client.core.disruptor.ShenyuClientRegisterEventPublisher;
+import org.apache.shenyu.client.core.register.BeanPostShenyuClientRegister;
 import org.apache.shenyu.client.sofa.common.annotation.ShenyuSofaClient;
+import org.apache.shenyu.client.sofa.common.annotation.ShenyuSofaClientDelegate;
 import org.apache.shenyu.client.sofa.common.dto.SofaRpcExt;
 import org.apache.shenyu.common.enums.RpcTypeEnum;
 import org.apache.shenyu.common.utils.GsonUtils;
@@ -32,6 +35,7 @@ import org.apache.shenyu.common.utils.IpUtils;
 import org.apache.shenyu.register.client.api.ShenyuClientRegisterRepository;
 import org.apache.shenyu.register.common.config.PropertiesConfig;
 import org.apache.shenyu.register.common.dto.MetaDataRegisterDTO;
+import org.apache.shenyu.register.common.dto.URIRegisterDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.support.AopUtils;
@@ -39,10 +43,13 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.util.ReflectionUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -52,46 +59,15 @@ import java.util.stream.Collectors;
 /**
  * The Sofa ServiceBean PostProcessor.
  */
-public class SofaServiceBeanPostProcessor implements BeanPostProcessor {
-
+public class SofaServiceBeanPostProcessor extends BeanPostShenyuClientRegister {
+    
     private static final Logger LOG = LoggerFactory.getLogger(SofaServiceBeanPostProcessor.class);
-
-    private final ShenyuClientRegisterEventPublisher publisher = ShenyuClientRegisterEventPublisher.getInstance();
-
-    private final ExecutorService executorService;
-
-    private final String contextPath;
-
-    private final String appName;
-
-    private final String host;
-
-    private final String port;
-
+    
     public SofaServiceBeanPostProcessor(final PropertiesConfig clientConfig, final ShenyuClientRegisterRepository shenyuClientRegisterRepository) {
-        Properties props = clientConfig.getProps();
-        String contextPath = props.getProperty(ShenyuClientConstants.CONTEXT_PATH);
-        String appName = props.getProperty(ShenyuClientConstants.APP_NAME);
-        if (StringUtils.isEmpty(contextPath)) {
-            throw new ShenyuClientIllegalArgumentException("sofa client must config the contextPath");
-        }
-        this.contextPath = contextPath;
-        this.appName = appName;
-        this.host = props.getProperty(ShenyuClientConstants.HOST);
-        this.port = props.getProperty(ShenyuClientConstants.PORT);
-        executorService = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("shenyu-sofa-client-thread-pool-%d").build());
-        publisher.start(shenyuClientRegisterRepository);
+        super(clientConfig, shenyuClientRegisterRepository);
     }
-
-    @Override
-    public Object postProcessAfterInitialization(final Object bean, final String beanName) throws BeansException {
-        if (bean instanceof ServiceFactoryBean) {
-            executorService.execute(() -> handler((ServiceFactoryBean) bean));
-        }
-        return bean;
-    }
-
-    private void handler(final ServiceFactoryBean serviceBean) {
+    
+    private List<MetaDataRegisterDTO> handler(final ServiceFactoryBean serviceBean) {
         Class<?> clazz;
         Object targetProxy;
         try {
@@ -99,27 +75,25 @@ public class SofaServiceBeanPostProcessor implements BeanPostProcessor {
             clazz = targetProxy.getClass();
         } catch (Exception e) {
             LOG.error("failed to get sofa target class", e);
-            return;
+            return Collections.emptyList();
         }
         if (AopUtils.isAopProxy(targetProxy)) {
             clazz = AopUtils.getTargetClass(targetProxy);
         }
         Method[] methods = ReflectionUtils.getUniqueDeclaredMethods(clazz);
-        for (Method method : methods) {
-            ShenyuSofaClient shenyuSofaClient = method.getAnnotation(ShenyuSofaClient.class);
-            if (Objects.nonNull(shenyuSofaClient)) {
-                publisher.publishEvent(buildMetaDataDTO(serviceBean, shenyuSofaClient, method));
-            }
-        }
+        return Arrays.stream(methods)
+                .filter(this::isShenyuClientOrOwner)
+                .map(method -> buildMetaDataDTO(serviceBean,
+                        this.getAnnotation(method), method)).collect(Collectors.toList());
     }
-
+    
     private MetaDataRegisterDTO buildMetaDataDTO(final ServiceFactoryBean serviceBean, final ShenyuSofaClient shenyuSofaClient, final Method method) {
-        String appName = this.appName;
-        String path = contextPath + shenyuSofaClient.path();
-        String desc = shenyuSofaClient.desc();
-        String serviceName = serviceBean.getInterfaceClass().getName();
-        String host = IpUtils.isCompleteHost(this.host) ? this.host : IpUtils.getHost(this.host);
-        int port = StringUtils.isBlank(this.port) ? -1 : Integer.parseInt(this.port);
+//        String appName = this.getAppName();
+//        String path = this.getContextPath() + shenyuSofaClient.path();
+//        String desc = shenyuSofaClient.desc();
+//        String serviceName = serviceBean.getInterfaceClass().getName();
+//        String host = this.getHost();
+//        int port = this.getPort();
         String configRuleName = shenyuSofaClient.ruleName();
         String ruleName = ("".equals(configRuleName)) ? path : configRuleName;
         String methodName = method.getName();
@@ -139,7 +113,7 @@ public class SofaServiceBeanPostProcessor implements BeanPostProcessor {
                 .appName(appName)
                 .serviceName(serviceName)
                 .methodName(methodName)
-                .contextPath(contextPath)
+                .contextPath(this.getContextPath())
                 .host(host)
                 .port(port)
                 .path(path)
@@ -151,7 +125,7 @@ public class SofaServiceBeanPostProcessor implements BeanPostProcessor {
                 .enabled(shenyuSofaClient.enabled())
                 .build();
     }
-
+    
     private String buildRpcExt(final ShenyuSofaClient shenyuSofaClient) {
         SofaRpcExt build = SofaRpcExt.builder()
                 .loadbalance(shenyuSofaClient.loadBalance())
@@ -159,5 +133,61 @@ public class SofaServiceBeanPostProcessor implements BeanPostProcessor {
                 .timeout(shenyuSofaClient.timeout())
                 .build();
         return GsonUtils.getInstance().toJson(build);
+    }
+    
+    /**
+     * Check param.
+     */
+    @Override
+    public void checkParam() {
+        if (StringUtils.isEmpty(this.getContextPath())) {
+            throw new ShenyuClientIllegalArgumentException("sofa client must config the contextPath");
+        }
+    }
+    
+    /**
+     * Gets meta data dto.
+     *
+     * @param bean the object
+     * @return the meta data dto
+     */
+    @Override
+    public List<MetaDataRegisterDTO> getMetaDataDto(final Object bean) {
+        if (bean instanceof ServiceFactoryBean) {
+            return handler((ServiceFactoryBean) bean);
+        }
+        return Collections.emptyList();
+    }
+    
+    /**
+     * Delegation t.
+     *
+     * @param client the client
+     * @return the t
+     */
+    @Override
+    protected ShenyuSofaClient delegate(final ShenyuClient client) {
+        return new ShenyuSofaClientDelegate(client);
+    }
+    
+    /**
+     * Gets owner class.
+     *
+     * @return the owner class
+     */
+    @Override
+    protected Class<ShenyuSofaClient> getOwnerClass() {
+        return ShenyuSofaClient.class;
+    }
+    
+    /**
+     * Gets register dto.
+     *
+     * @return the register dto，It may return null,
+     * and some services do not need to register the URIRegisterDTO object.
+     */
+    @Override
+    public URIRegisterDTO getRegisterDto() {
+        return null;
     }
 }
