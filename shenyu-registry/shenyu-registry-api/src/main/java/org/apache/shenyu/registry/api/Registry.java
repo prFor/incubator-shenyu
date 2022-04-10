@@ -17,6 +17,8 @@
 
 package org.apache.shenyu.registry.api;
 
+import org.apache.shenyu.spi.SPI;
+
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +26,7 @@ import java.util.Map;
  * Registry .
  * Implementation of registry using and not being able to.
  */
+@SPI
 public interface Registry {
 
     /**
@@ -41,16 +44,16 @@ public interface Registry {
     /**
      * unregister.
      *
-     * @param path the path
+     * @param pathList the path list
      */
-    void unRegistry(Map<String, Object> path);
+    void unRegistry(List<String> pathList);
 
     /**
      * Subscribe.
      * Subscribe to different path data.
      *
-     * @param path     the path
+     * @param pathList the path list
      * @param consumer the consumer
      */
-    void subscribe(Map<String, Object> path, RegistryConsumer consumer);
+    void subscribe(final List<String> pathList, RegistryConsumer consumer);
 }

@@ -15,21 +15,33 @@
  * limitations under the License.
  */
 
-package org.apache.shenyu.registry.api;
+package org.apache.shenyu.registry.zookeeper;
+
+import org.I0Itec.zkclient.IZkDataListener;
 
 /**
- * RegistryConsumer .
- * consumer.
+ * ZookeeperListener .
+ * listener.
  */
-@FunctionalInterface
-public interface RegistryConsumer {
-
-
+public abstract class ZookeeperListener implements IZkDataListener {
+    
+    
     /**
-     * Data.
-     * registered message notification.
+     * Data change string.
      *
-     * @param datas notification data.
+     * @param path the path
+     * @param data the data
+     * @return the string
      */
-    void data(String datas);
+    abstract void dataChange(String path, String data);
+    
+    @Override
+    public void handleDataChange(final String dataPath, final Object data) throws Exception {
+        this.dataChange(dataPath, data.toString());
+    }
+    
+    @Override
+    public void handleDataDeleted(final String dataPath) throws Exception {
+    
+    }
 }

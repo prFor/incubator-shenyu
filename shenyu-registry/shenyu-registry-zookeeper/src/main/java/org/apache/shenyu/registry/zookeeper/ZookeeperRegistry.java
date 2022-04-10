@@ -19,10 +19,13 @@ package org.apache.shenyu.registry.zookeeper;
 
 
 import org.I0Itec.zkclient.ZkClient;
+import org.apache.shenyu.common.annotations.Beta;
 import org.apache.shenyu.common.utils.JsonUtils;
 import org.apache.shenyu.registry.api.AbstractRegistry;
 import org.apache.shenyu.registry.api.RegistryConfig;
-import org.apache.shenyu.registry.api.RegistryConsumer;
+import org.apache.shenyu.spi.Join;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import java.util.List;
@@ -33,22 +36,24 @@ import java.util.Properties;
  * ZookeeperRegistry .
  * zookeeper Implementation of the registry.
  */
+@Join
 public class ZookeeperRegistry extends AbstractRegistry {
-
-    private static final String SEPARATOR = "/";
-
+    
+    private final Logger logger = LoggerFactory.getLogger(ZookeeperRegistry.class);
+    
     /**
      * client.
      */
     private ZkClient zkClient;
-
+    
     /**
      * Instantiates a new Zookeeper registry.
      */
+    @Beta
     public ZookeeperRegistry() {
         super(null);
     }
-
+    
     /**
      * Instantiates a new Abstract registry.
      *
@@ -59,45 +64,68 @@ public class ZookeeperRegistry extends AbstractRegistry {
         //create zkClient.
         createClient();
     }
-
+    
     private void createClient() {
         Properties props = this.getRegistryConfig().getProps();
         int sessionTimeout = Integer.parseInt(props.getProperty("sessionTimeout", "30000"));
         int connectionTimeout = Integer.parseInt(props.getProperty("connectionTimeout", "3000"));
-
         this.zkClient = new ZkClient(this.getRegistryConfig().getServerLists(), sessionTimeout, connectionTimeout);
+        this.zkClient.setZkSerializer(new ZookeeperSerizlizer());
     }
-
+    
     @Override
-    public void registry(List<String> pathList, Map<String, Object> data, boolean ephemeral) {
+    public void registry(final List<String> pathList, final Map<String, Object> data, final boolean ephemeral) {
         Assert.notNull(pathList, "path is null");
         //build a path.
         String path = this.getPath(pathList);
         String dataJson = this.getData(data);
-        this.create(path, dataJson, ephemeral);
+        try {
+            this.create(path, dataJson, ephemeral);
+        } catch (Exception e) {
+            logger.warn("registry path {} Fail", path, e);
+        }
+        
     }
-
+    
     @Override
-    public void unRegistry(Map<String, Object> path) {
-
+    public void unRegistry(final List<String> pathList) {
+        Assert.notNull(pathList, "path is null");
+        //build a path.
+        String path = this.getPath(pathList);
+        try {
+            this.remove(path);
+        } catch (Exception ex) {
+            logger.warn("unRegistry path {} Fail", path, ex);
+        }
     }
-
+    
+    /**
+     * Subclasses implement subscription operations.
+     *
+     * @param pathList pathList.
+     */
     @Override
-    public void subscribe(Map<String, Object> path, RegistryConsumer consumer) {
-
+    protected void doSubscribe(final List<String> pathList) {
+        String path = this.getPath(pathList);
+        this.zkClient.subscribeDataChanges(path, new ZookeeperListener() {
+            @Override
+            void dataChange(final String path, final String data) {
+                ZookeeperRegistry.this.notify(path, data);
+            }
+        });
+        Object data = this.zkClient.readData(path);
+        super.notify(path, data.toString());
     }
-
+    
     private void create(String path,
                         String data,
                         boolean ephemeral) {
-        if (!ephemeral) {
-            if (zkClient.exists(path)) {
-                this.remove(path);
-            }
+        if (zkClient.exists(path)) {
+            this.remove(path);
         }
         int index = path.lastIndexOf(SEPARATOR);
         if (index > 0) {
-            create(path.substring(0, index), ephemeral);
+            create(path.substring(0, index), false);
         }
         if (ephemeral) {
             zkClient.createEphemeral(path, data);
@@ -105,7 +133,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
             zkClient.createPersistent(path, data);
         }
     }
-
+    
     private void create(String path,
                         boolean ephemeral) {
         if (!ephemeral) {
@@ -115,7 +143,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
         }
         int index = path.lastIndexOf(SEPARATOR);
         if (index > 0) {
-            create(path.substring(0, index), ephemeral);
+            create(path.substring(0, index), false);
         }
         if (ephemeral) {
             zkClient.createEphemeral(path);
@@ -123,18 +151,14 @@ public class ZookeeperRegistry extends AbstractRegistry {
             zkClient.createPersistent(path);
         }
     }
-
+    
     private void remove(String path) {
         boolean exists = zkClient.exists(path);
         if (exists) {
             zkClient.delete(path);
         }
     }
-
-    private String getPath(List<String> pathList) {
-        return SEPARATOR + String.join(SEPARATOR, pathList);
-    }
-
+    
     private String getData(Map<String, Object> data) {
         return JsonUtils.toJson(data);
     }

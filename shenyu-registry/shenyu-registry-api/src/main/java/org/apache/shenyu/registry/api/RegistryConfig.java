@@ -41,7 +41,7 @@ public class RegistryConfig extends PropertiesConfig {
      *
      * @param serverLists the server lists
      */
-    public void setServerLists(String serverLists) {
+    public void setServerLists(final String serverLists) {
         this.serverLists = serverLists;
     }
 }
