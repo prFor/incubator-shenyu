@@ -15,24 +15,12 @@
  * limitations under the License.
  */
 
-package org.apache.shenyu.registry.zookeeper;
-
-import org.I0Itec.zkclient.exception.ZkMarshallingError;
-import org.I0Itec.zkclient.serialize.ZkSerializer;
-
-import java.nio.charset.StandardCharsets;
+package org.apache.shenyu.registry.nacos;
 
 /**
- * ZookeeperSerizlizer .
+ * NacosUtils .
  */
-public class ZookeeperSerizlizer implements ZkSerializer {
-    @Override
-    public byte[] serialize(final Object data) throws ZkMarshallingError {
-        return data.toString().getBytes(StandardCharsets.UTF_8);
-    }
-    
-    @Override
-    public Object deserialize(final byte[] bytes) throws ZkMarshallingError {
-        return new String(bytes, StandardCharsets.UTF_8);
-    }
+public class NacosUtils {
+
+
 }

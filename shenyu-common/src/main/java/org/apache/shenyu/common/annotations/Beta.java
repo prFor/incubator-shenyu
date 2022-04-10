@@ -15,23 +15,20 @@
  * limitations under the License.
  */
 
-package org.apache.shenyu.registry.api;
+package org.apache.shenyu.common.annotations;
 
-import java.util.Map;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * RegistryConsumer .
- * consumer.
+ * Beta.
+ * Code used to annotate markers for testing.
  */
-@FunctionalInterface
-public interface RegistryConsumer {
-    
-    
-    /**
-     * Data.
-     * registered message notification.
-     *
-     * @param data notification data.
-     */
-    void data(Map<String, String> data);
+@Retention(RetentionPolicy.CLASS)
+@Target({ElementType.ANNOTATION_TYPE, ElementType.CONSTRUCTOR, ElementType.FIELD, ElementType.METHOD, ElementType.TYPE})
+@Documented
+public @interface Beta {
 }

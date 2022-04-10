@@ -28,32 +28,40 @@ import java.util.Map;
  */
 @SPI
 public interface Registry {
-
+    
     /**
      * Registry.
      * data registration.
      *
-     * @param pathList  the path list
-     * @param data      the data
-     * @param ephemeral node properties.
+     * @param registryInfo the registry info
+     * @param data         the data
+     * @param ephemeral    node properties.
      */
-    void registry(List<String> pathList,
-                  Map<String, Object> data,
+    void registry(RegistryInfo registryInfo,
+                  Map<String, String> data,
                   boolean ephemeral);
-
+    
     /**
      * unregister.
      *
-     * @param pathList the path list
+     * @param registryInfo the registry info
      */
-    void unRegistry(List<String> pathList);
-
+    void unRegistry(RegistryInfo registryInfo);
+    
     /**
      * Subscribe.
      * Subscribe to different path data.
      *
-     * @param pathList the path list
-     * @param consumer the consumer
+     * @param registryInfo the registry info
+     * @param consumer     the consumer
      */
-    void subscribe(final List<String> pathList, RegistryConsumer consumer);
+    void subscribe(RegistryInfo registryInfo, RegistryConsumer consumer);
+    
+    /**
+     * remove subscription.
+     *
+     * @param registryInfo the registry info
+     * @param consumer     the consumer
+     */
+    void unSubscribe(RegistryInfo registryInfo, RegistryConsumer consumer);
 }

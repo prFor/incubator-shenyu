@@ -17,6 +17,8 @@
 
 package org.apache.shenyu.registry.api;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import java.util.List;
@@ -31,6 +33,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
  */
 public abstract class AbstractRegistry implements Registry {
     
+    private final Logger logger = LoggerFactory.getLogger(AbstractRegistry.class);
     
     /**
      * The constant SEPARATOR.
@@ -59,49 +62,70 @@ public abstract class AbstractRegistry implements Registry {
         return registryConfig;
     }
     
-    /**
-     * Subscribe.
-     * Subscribe to different path data.
-     *
-     * @param pathList the path list
-     * @param consumer the consumer
-     */
     @Override
-    public void subscribe(final List<String> pathList, final RegistryConsumer consumer) {
-        Assert.notNull(pathList, "pathList is null");
+    public void subscribe(final RegistryInfo registryInfo, final RegistryConsumer consumer) {
+        Assert.notNull(registryInfo, "pathList is null");
         Assert.notNull(consumer, "consumer is null");
-        String path = this.getPath(pathList);
+        String path = this.getPath(registryInfo);
+        logger.info("subscribe {} success", path);
         Set<RegistryConsumer> lists = subscribed.computeIfAbsent(path, set -> new CopyOnWriteArraySet<>());
         lists.add(consumer);
-        this.doSubscribe(pathList);
+        this.doSubscribe(registryInfo);
     }
     
-    /**
-     * notify data.
-     *
-     * @param path  the path
-     * @param datas the datas
-     */
-    protected void notify(String path, String data) {
+    @Override
+    public void unSubscribe(final RegistryInfo registryInfo, final RegistryConsumer consumer) {
+        Assert.notNull(registryInfo, "pathList is null");
+        Assert.notNull(consumer, "consumer is null");
+        String path = this.getPath(registryInfo);
+        logger.info("unSubscribe {} success", path);
         Set<RegistryConsumer> consumers = subscribed.get(path);
-        Optional.ofNullable(consumers).ifPresent(c -> c.forEach(cs -> cs.data(data)));
+        if (consumers != null) {
+            consumers.remove(consumer);
+        }
     }
     
     /**
      * Convert data into relevant paths.
      *
-     * @param pathList pathList.
+     * @param registryInfo the registry info
      * @return String. path
      */
-    protected String getPath(List<String> pathList) {
-        return SEPARATOR + String.join(SEPARATOR, pathList);
+    protected String getPath(final RegistryInfo registryInfo) {
+        Assert.notNull(registryInfo, "registry info is null");
+        return registryInfo.getServiceKey(this.type());
+    }
+    
+    /**
+     * notify data.
+     *
+     * @param path the path
+     * @param data the data.
+     */
+    protected void notify(String path, Map<String,String> data) {
+        Set<RegistryConsumer> consumers = subscribed.get(path);
+        Optional.ofNullable(consumers).ifPresent(c -> c.forEach(cs -> cs.data(data)));
     }
     
     /**
      * Subclasses implement subscription operations.
      *
-     * @param pathList pathList.
+     * @param registryInfo the registry info
      */
-    protected abstract void doSubscribe(final List<String> pathList);
+    protected abstract void doSubscribe(final RegistryInfo registryInfo);
     
+    
+    /**
+     * Do un subscribe.
+     *
+     * @param registryInfo the registry info
+     */
+    protected abstract void doUnSubscribe(final RegistryInfo registryInfo);
+    
+    /**
+     * Create your own registered type..
+     *
+     * @return the string
+     */
+    protected abstract String type();
 }

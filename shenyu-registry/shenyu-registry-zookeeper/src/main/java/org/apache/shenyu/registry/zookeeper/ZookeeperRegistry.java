@@ -23,6 +23,7 @@ import org.apache.shenyu.common.annotations.Beta;
 import org.apache.shenyu.common.utils.JsonUtils;
 import org.apache.shenyu.registry.api.AbstractRegistry;
 import org.apache.shenyu.registry.api.RegistryConfig;
+import org.apache.shenyu.registry.api.RegistryInfo;
 import org.apache.shenyu.spi.Join;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ import org.springframework.util.Assert;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * ZookeeperRegistry .
@@ -45,6 +47,8 @@ public class ZookeeperRegistry extends AbstractRegistry {
      * client.
      */
     private ZkClient zkClient;
+    
+    private final Map<String, ZookeeperListener> listeners = new ConcurrentHashMap<>();
     
     /**
      * Instantiates a new Zookeeper registry.
@@ -70,14 +74,14 @@ public class ZookeeperRegistry extends AbstractRegistry {
         int sessionTimeout = Integer.parseInt(props.getProperty("sessionTimeout", "30000"));
         int connectionTimeout = Integer.parseInt(props.getProperty("connectionTimeout", "3000"));
         this.zkClient = new ZkClient(this.getRegistryConfig().getServerLists(), sessionTimeout, connectionTimeout);
-        this.zkClient.setZkSerializer(new ZookeeperSerizlizer());
+        this.zkClient.setZkSerializer(new ZookeeperSerializer());
     }
     
     @Override
-    public void registry(final List<String> pathList, final Map<String, Object> data, final boolean ephemeral) {
-        Assert.notNull(pathList, "path is null");
+    public void registry(final RegistryInfo registryInfo, final Map<String, Object> data, final boolean ephemeral) {
+        Assert.notNull(registryInfo, "path is null");
         //build a path.
-        String path = this.getPath(pathList);
+        String path = this.getPath(registryInfo);
         String dataJson = this.getData(data);
         try {
             this.create(path, dataJson, ephemeral);
@@ -88,10 +92,10 @@ public class ZookeeperRegistry extends AbstractRegistry {
     }
     
     @Override
-    public void unRegistry(final List<String> pathList) {
-        Assert.notNull(pathList, "path is null");
+    public void unRegistry(final RegistryInfo registryInfo) {
+        Assert.notNull(registryInfo, "path is null");
         //build a path.
-        String path = this.getPath(pathList);
+        String path = this.getPath(registryInfo);
         try {
             this.remove(path);
         } catch (Exception ex) {
@@ -99,22 +103,37 @@ public class ZookeeperRegistry extends AbstractRegistry {
         }
     }
     
-    /**
-     * Subclasses implement subscription operations.
-     *
-     * @param pathList pathList.
-     */
     @Override
-    protected void doSubscribe(final List<String> pathList) {
-        String path = this.getPath(pathList);
-        this.zkClient.subscribeDataChanges(path, new ZookeeperListener() {
+    protected void doSubscribe(final RegistryInfo registryInfo) {
+        String path = this.getPath(registryInfo);
+        ZookeeperListener zkListener = this.listeners.computeIfAbsent(path, k -> new ZookeeperListener() {
             @Override
-            void dataChange(final String path, final String data) {
-                ZookeeperRegistry.this.notify(path, data);
+            void dataChange(final String path1, final String data) {
+                ZookeeperRegistry.this.notify(path1, data);
             }
         });
+        this.zkClient.subscribeDataChanges(path, zkListener);
         Object data = this.zkClient.readData(path);
         super.notify(path, data.toString());
+    }
+    
+    @Override
+    protected void doUnSubscribe(final RegistryInfo registryInfo) {
+        String path = this.getPath(registryInfo);
+        ZookeeperListener zkListener = this.listeners.get(path);
+        if (zkListener != null) {
+            zkClient.unsubscribeDataChanges(path, zkListener);
+        }
+    }
+    
+    /**
+     * Create your own registered type..
+     *
+     * @return the string
+     */
+    @Override
+    protected String type() {
+        return "zookeeper";
     }
     
     private void create(String path,

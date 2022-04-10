@@ -15,23 +15,30 @@
  * limitations under the License.
  */
 
-package org.apache.shenyu.registry.api;
+package org.apache.shenyu.registry.zookeeper;
 
-import java.util.Map;
+import org.I0Itec.zkclient.exception.ZkMarshallingError;
+import org.I0Itec.zkclient.serialize.ZkSerializer;
+
+import java.nio.charset.StandardCharsets;
 
 /**
- * RegistryConsumer .
- * consumer.
+ * ZookeeperSerializer .
  */
-@FunctionalInterface
-public interface RegistryConsumer {
+public class ZookeeperSerializer implements ZkSerializer {
+    @Override
+    public byte[] serialize(final Object data) throws ZkMarshallingError {
+        if (data != null) {
+            return data.toString().getBytes(StandardCharsets.UTF_8);
+        }
+        return new byte[]{};
+    }
     
-    
-    /**
-     * Data.
-     * registered message notification.
-     *
-     * @param data notification data.
-     */
-    void data(Map<String, String> data);
+    @Override
+    public Object deserialize(final byte[] bytes) throws ZkMarshallingError {
+        if (bytes != null) {
+            return new String(bytes, StandardCharsets.UTF_8);
+        }
+        return "";
+    }
 }

@@ -18,20 +18,18 @@
 package org.apache.shenyu.registry.zookeeper;
 
 import org.I0Itec.zkclient.ZkClient;
-import org.apache.shenyu.common.utils.JsonUtils;
 import org.apache.shenyu.common.utils.ReflectUtils;
 import org.apache.shenyu.registry.api.Registry;
-import org.apache.shenyu.registry.api.RegistryConfig;
-import org.apache.shenyu.registry.api.RegistryConsumer;
+import org.apache.shenyu.registry.api.RegistryInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -45,9 +43,11 @@ public class ZookeeperRegistryTest {
     
     private ZkClient zkClient;
     
-    private List<String> paths;
+    private Set<String> paths;
     
-    HashMap<String, Object> data;
+    HashMap<String, String> data;
+    
+    private RegistryInfo registryInfo;
     
     /**
      * Sets up.
@@ -58,15 +58,20 @@ public class ZookeeperRegistryTest {
         zkClient = mockClient();
         ReflectUtils.setFieldValue(zookeeperRegistry, "zkClient", zkClient);
         zookeeperBroker.clear();
-        paths = new ArrayList<>();
+        paths = new HashSet<>();
         paths.add("shenyu");
         paths.add("registry");
         paths.add("service");
         paths.add("test");
         data = new HashMap<>();
         data.put("ip", "127.0.0.1");
-        data.put("port", 4331);
+        data.put("port", "4331");
         data.put("service", "org.apache.shenyu.registry.zookeeper.ZookeeperRegistryTest");
+        registryInfo = new RegistryInfo();
+        registryInfo.setParameters(null);
+        registryInfo.setPaths(paths);
+        registryInfo.setPort(323);
+        registryInfo.setHost("127.0.0.1");
     }
     
     /**
@@ -74,8 +79,8 @@ public class ZookeeperRegistryTest {
      */
     @Test
     public void registryEphemeral() {
-        String pathJoin = "/" + String.join("/", paths);
-        zookeeperRegistry.registry(paths, data, true);
+        String pathJoin = registryInfo.getServiceKey("zookeeper");
+        zookeeperRegistry.registry(registryInfo, data, true);
         Mockito.verify(zkClient, Mockito.times(1)).createEphemeral(Mockito.anyString(), Mockito.any(Object.class));
         Mockito.verify(zkClient, Mockito.times(3)).createEphemeral(Mockito.anyString());
         Assertions.assertTrue(zookeeperBroker.containsKey(pathJoin));
@@ -85,8 +90,8 @@ public class ZookeeperRegistryTest {
     
     @Test
     public void registryPersistent() {
-        String pathJoin = "/" + String.join("/", paths);
-        zookeeperRegistry.registry(paths, data, false);
+        String pathJoin = registryInfo.getServiceKey("zookeeper");
+        zookeeperRegistry.registry(registryInfo, data, false);
         Mockito.verify(zkClient, Mockito.times(4)).exists(Mockito.anyString());
         Mockito.verify(zkClient, Mockito.times(1)).createPersistent(Mockito.anyString(), Mockito.any(Object.class));
         Mockito.verify(zkClient, Mockito.times(3)).createPersistent(Mockito.anyString());
@@ -97,9 +102,9 @@ public class ZookeeperRegistryTest {
     
     @Test
     public void registryPersistentDelete() {
-        String pathJoin = "/" + String.join("/", paths);
+        String pathJoin = registryInfo.getServiceKey("zookeeper");
         Mockito.when(zkClient.exists(Mockito.anyString())).thenReturn(true);
-        zookeeperRegistry.registry(paths, data, false);
+        zookeeperRegistry.registry(registryInfo, data, false);
         Mockito.verify(zkClient, Mockito.times(1)).delete(Mockito.anyString());
         Mockito.verify(zkClient, Mockito.times(3)).exists(Mockito.anyString());
         Mockito.verify(zkClient, Mockito.times(1)).createPersistent(Mockito.anyString(), Mockito.any(Object.class));
@@ -125,29 +130,6 @@ public class ZookeeperRegistryTest {
             return 1;
         }).when(zkClient).createPersistent(Mockito.anyString(), Mockito.any(Object.class));
         return zkClient;
-    }
-    
-    public static void main(String[] args) throws InterruptedException {
-        RegistryConfig registryConfig = new RegistryConfig();
-        registryConfig.setServerLists("127.0.0.1:2181");
-        ZookeeperRegistry zookeeperRegistry = new ZookeeperRegistry(registryConfig);
-        List<String> paths = new ArrayList<>();
-        paths.add("shenyu");
-        paths.add("registry");
-        paths.add("service");
-        paths.add("test");
-        Map<String, Object> data = new HashMap<>();
-        data.put("ip", "127.0.0.1");
-        data.put("port", 4331);
-        data.put("service2", "org.apache.shenyu.registry.zookeeper.ZookeeperRegistryTest");
-        zookeeperRegistry.registry(paths, data, true);
-        zookeeperRegistry.subscribe(paths, new RegistryConsumer() {
-            @Override
-            public void data(final String datas) {
-                System.out.println(datas);
-            }
-        });
-        Thread.sleep(Integer.MAX_VALUE);
     }
 }
 
